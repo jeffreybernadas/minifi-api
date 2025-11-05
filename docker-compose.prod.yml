@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: nestjs-starter-server
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    network_mode: host
+    command: sh -c "node dist/main.js"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: nestjs-starter-worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    network_mode: host
+    command: sh -c "node dist/main.worker.js"
+

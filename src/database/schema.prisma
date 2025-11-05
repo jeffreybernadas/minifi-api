@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id String @id // Keycloak sub (UUID) - NOT auto-generated
+
+  // From keycloak
+  email         String  @unique
+  username      String? // preferred_username from Keycloak
+  firstName     String? // given_name from Keycloak
+  lastName      String? // family_name from Keycloak
+  emailVerified Boolean @default(false)
+
+  // Additional profile fields (managed by application)
+  phoneNumber String?
+  avatarUrl   String?
+  address     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([username])
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  name      String? // Optional for direct chats, required for group chats
+  type      ChatType @default(GROUP)
+  creatorId String // Keycloak user ID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  ChatMember[]
+  messages Message[]
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([creatorId])
+}
+
+model ChatMember {
+  id     String @id @default(uuid())
+  chatId String
+  userId String // Keycloak user ID
+
+  joinedAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId])
+  @@index([chatId])
+}
+
+model Message {
+  id        String  @id @default(uuid())
+  chatId    String
+  senderId  String // Keycloak user ID
+  content   String  @db.Text
+  isEdited  Boolean @default(false)
+  isDeleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chat   Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  readBy MessageRead[]
+
+  @@index([chatId, createdAt])
+  @@index([senderId])
+}
+
+model MessageRead {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String // Keycloak user ID
+  readAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@index([messageId])
+  @@index([readAt])
+}

@@ -1,0 +1,24 @@
+meta {
+  name: get token
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://keycloak.thecodebit.digital/realms/thecodebit/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  grant_type: password
+  scope: openid
+  username: nest@nest.com
+  password: Password!23
+  client_id: test-keycloak
+  client_secret: AJtziSyMq4gTVW62sfOe3jr0oYNfwErf
+}
+
+settings {
+  encodeUrl: true
+}

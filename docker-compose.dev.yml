@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: nestjs-starter-server
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "pnpm run start:dev"
+    network_mode: host
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: nestjs-starter-worker
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "pnpm run start:worker:dev"
+    network_mode: host
+

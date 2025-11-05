@@ -1,0 +1,27 @@
+/**
+ * Custom error codes enum for application-specific errors
+ * These codes provide more granular error identification beyond HTTP status codes
+ */
+export enum CustomErrorCode {
+  // Generic errors
+  GENERIC_ERROR = 'GENERIC_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+
+  // OTP related errors
+  OTP_REQUIRED = 'OTP_REQUIRED',
+  INVALID_OTP = 'INVALID_OTP',
+  OTP_EXPIRED = 'OTP_EXPIRED',
+
+  // External service errors
+  EXTERNAL_SERVICE_ERROR = 'EXTERNAL_SERVICE_ERROR',
+  THIRD_PARTY_API_ERROR = 'THIRD_PARTY_API_ERROR',
+
+  // WebSocket errors
+  WS_CONNECTION_FAILED = 'WS_CONNECTION_FAILED',
+  WS_AUTHENTICATION_REQUIRED = 'WS_AUTHENTICATION_REQUIRED',
+  WS_UNAUTHORIZED = 'WS_UNAUTHORIZED',
+  WS_RATE_LIMIT_EXCEEDED = 'WS_RATE_LIMIT_EXCEEDED',
+  WS_INVALID_EVENT = 'WS_INVALID_EVENT',
+  WS_ROOM_NOT_FOUND = 'WS_ROOM_NOT_FOUND',
+  WS_ALREADY_IN_ROOM = 'WS_ALREADY_IN_ROOM',
+}

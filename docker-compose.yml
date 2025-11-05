@@ -1,0 +1,227 @@
+# Docker Compose - Full Stack
+# Purpose: Run all infrastructure services + app + worker together
+# Use case: Quick start for new developers or complete local environment
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # Application Services
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: nestjs-starter-server
+    restart: always
+    ports:
+      - '${APP_PORT:-3000}:${APP_PORT:-3000}'
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-nest_starter}?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URI=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672
+      - ELASTIC_SEARCH_URL=http://elasticsearch:9200
+      - ELASTIC_APM_SERVER_URL=http://apm:8200
+      - KEYCLOAK_URL=http://keycloak:8080
+    depends_on:
+      - database
+      - redis
+      - rabbitmq
+      - elasticsearch
+      - keycloak
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "pnpm run start:dev"
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: nestjs-starter-worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-nest_starter}?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URI=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin}@rabbitmq:5672
+      - ELASTIC_SEARCH_URL=http://elasticsearch:9200
+      - ELASTIC_APM_SERVER_URL=http://apm:8200
+    depends_on:
+      - database
+      - redis
+      - rabbitmq
+      - elasticsearch
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "pnpm run start:worker:dev"
+
+  # Infrastructure Services
+  database:
+    image: postgres:alpine
+    container_name: nestjs-starter-database
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-nest_starter}
+    ports:
+      - '5432:5432'
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: nestjs-starter-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: nestjs-starter-rabbitmq
+    hostname: rabbitmq
+    restart: always
+    ports:
+      - '5672:5672'
+    environment:
+      - SERVICE_FQDN_RABBITMQ_15672
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-admin}
+      - 'PORT=${PORT:-5672}'
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  minio:
+    image: 'quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z'
+    container_name: nestjs-starter-minio
+    restart: always
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  elasticsearch:
+    image: 'docker.elastic.co/elasticsearch/elasticsearch:8.15.1'
+    container_name: nestjs-starter-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - 'ES_JAVA_OPTS=-Xms2g -Xmx2g'
+      - xpack.security.enabled=true
+      - 'ELASTIC_PASSWORD=${ELASTIC_PASSWORD}'
+      - network.host=0.0.0.0
+      - http.host=0.0.0.0
+      - cluster.name=docker-cluster
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - '9200:9200'
+  kibana:
+    image: 'docker.elastic.co/kibana/kibana:8.15.1'
+    container_name: nestjs-starter-kibana
+    restart: unless-stopped
+    environment:
+      - 'ELASTICSEARCH_HOSTS=["http://elasticsearch:9200"]'
+      - 'ELASTICSEARCH_USERNAME=elastic'
+      - 'ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}'
+    ports:
+      - '5601:5601'
+    depends_on:
+      - elasticsearch
+  apm:
+    image: 'docker.elastic.co/apm/apm-server:8.15.1'
+    container_name: nestjs-starter-apm
+    restart: always
+    ports:
+      - '8200:8200'
+    environment:
+      - 'ELASTIC_USERNAME=elastic'
+      - 'ELASTIC_PASSWORD=${ELASTIC_PASSWORD}'
+    command: >
+      sh -c "echo 'apm-server:
+        host: \"0.0.0.0:8200\"
+        ssl.enabled: false
+
+      output.elasticsearch:
+        hosts: [\"http://elasticsearch:9200\"]
+        username: \"elastic\"
+        password: \"${ELASTIC_PASSWORD}\"
+        ssl:
+          verification_mode: none
+          enabled: false
+
+      setup.kibana:
+        host: \"http://kibana:5601\"
+        ssl.verification_mode: none
+
+      logging.level: info
+      monitoring.enabled: true' > /usr/share/apm-server/apm-server.yml && apm-server -e"
+    depends_on:
+      - elasticsearch
+      - kibana
+
+  keycloak-db:
+    image: 'postgres:alpine'
+    container_name: nestjs-starter-keycloak-db
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${KEYCLOAK_DB:-keycloak}
+    volumes:
+      - keycloak_postgresql_data:/var/lib/postgresql/data
+
+  keycloak:
+    image: 'quay.io/keycloak/keycloak:26.1'
+    container_name: nestjs-starter-keycloak
+    restart: always
+    ports:
+      - '8080:8080'
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB:-keycloak}
+      - KC_DB_USERNAME=${POSTGRES_USER:-postgres}
+      - KC_DB_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    command: start-dev
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    depends_on:
+      - keycloak-db
+
+networks:
+  default:
+    name: nestjs-starter
+
+volumes:
+  database_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  elasticsearch_data:
+  keycloak_postgresql_data:
+  keycloak_data:
