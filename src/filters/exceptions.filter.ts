@@ -62,11 +62,11 @@ export class ExceptionsFilter<T> implements ExceptionFilter {
     }
     // Handle Prisma Known Request Errors
     else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      switch (exception.code) {
+      const prismaError = exception as Prisma.PrismaClientKnownRequestError;
+      switch (prismaError.code) {
         case 'P2002': // Unique constraint violation
           statusCode = 409;
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          message = `Unique constraint failed on field(s): ${exception.meta?.target}`;
+          message = `Unique constraint failed on field(s): ${prismaError.meta?.target}`;
           customCode = 'UNIQUE_CONSTRAINT_VIOLATION';
           break;
         case 'P2025': // Record not found
@@ -76,7 +76,7 @@ export class ExceptionsFilter<T> implements ExceptionFilter {
           break;
         default:
           statusCode = 400;
-          message = `Database error: ${exception.message}`;
+          message = `Database error: ${prismaError.message}`;
           customCode = 'PRISMA_ERROR';
       }
     }

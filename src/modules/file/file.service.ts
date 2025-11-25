@@ -1,6 +1,6 @@
 import { MINIO_CONNECTION } from '@/constants/minio.constant';
 import { Inject, Injectable } from '@nestjs/common';
-import { Client } from 'minio';
+import { Client, ItemBucketMetadata } from 'minio';
 import { SingleUploadDto, MultipleUploadDto } from './dto/upload.dto';
 import { ConfigService } from '@nestjs/config';
 
@@ -14,7 +14,7 @@ export class FileService {
   async uploadSingleFile(
     file: Express.Multer.File,
     body: SingleUploadDto,
-    meta: any,
+    meta: ItemBucketMetadata,
     bucket?: string,
     folder?: string,
   ) {
@@ -47,7 +47,7 @@ export class FileService {
 
   async uploadMultipleFiles(
     files: Express.Multer.File[],
-    meta: any,
+    meta: ItemBucketMetadata,
     body?: MultipleUploadDto,
     bucket?: string,
     folder?: string,

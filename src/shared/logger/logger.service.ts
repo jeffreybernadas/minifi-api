@@ -26,7 +26,6 @@ export class LoggerService implements NestLogger {
           timestamp(),
           colorize(),
           printf(({ timestamp, level, context, message, meta }) => {
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             return `[${timestamp}]: ${level} [${context}] ${message} ${meta ? JSON.stringify(meta) : ''}`;
           }),
         )
