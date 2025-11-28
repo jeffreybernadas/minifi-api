@@ -65,6 +65,8 @@ async function bootstrap() {
       .addTag('users', 'User management endpoints')
       .addTag('upload', 'File management endpoints')
       .addTag('chat', 'Chat management endpoints')
+      .addTag('links', 'Link management endpoints')
+      .addTag('redirect', 'Public redirect endpoints')
       .addServer(`http://localhost:${port}`, 'Development')
       .addBearerAuth(
         {

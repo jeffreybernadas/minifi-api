@@ -11,7 +11,6 @@ export class CacheService {
   }
 
   async set(key: string, value: any, ttl?: number): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     await this.cache.set(key, value, { ttl } as any);
   }
 

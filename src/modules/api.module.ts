@@ -3,8 +3,9 @@ import { HealthModule } from './health/health.module';
 import { UserModule } from './user/user.module';
 import { FileModule } from './file/file.module';
 import { ChatModule } from './chat/chat.module';
+import { LinkModule } from './link/link.module';
 
 @Module({
-  imports: [HealthModule, UserModule, FileModule, ChatModule],
+  imports: [HealthModule, UserModule, FileModule, ChatModule, LinkModule],
 })
 export class ApiModule {}

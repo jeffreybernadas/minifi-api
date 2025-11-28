@@ -6,6 +6,7 @@ export enum CustomErrorCode {
   // Generic errors
   GENERIC_ERROR = 'GENERIC_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
+  TOO_MANY_REQUESTS = 'TOO_MANY_REQUESTS',
 
   // OTP related errors
   OTP_REQUIRED = 'OTP_REQUIRED',

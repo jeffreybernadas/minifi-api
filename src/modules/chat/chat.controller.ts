@@ -27,6 +27,7 @@ import {
   CursorPageOptionsDto,
   CursorPaginatedDto,
 } from '@/common/dto/cursor-pagination';
+import { KeycloakJWT } from '../user/interfaces/keycloak-jwt.interface';
 
 @ApiTags('chat')
 @ApiBearerAuth('JWT')
@@ -62,10 +63,10 @@ export class ChatController {
     errorCode: 'UNAUTHORIZED',
   })
   async createChat(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Body() dto: CreateChatDto,
   ): Promise<ChatResponseDto> {
-    const creatorId = user.sub as string;
+    const creatorId = user.sub;
     const chat = await this.chatService.createChat(creatorId, dto);
 
     // Emit WebSocket event to notify all members about the new chat
@@ -106,8 +107,10 @@ export class ChatController {
     description: 'Unauthorized - Invalid or missing token',
     errorCode: 'UNAUTHORIZED',
   })
-  getUserChats(@AuthenticatedUser() user: any): Promise<ChatResponseDto[]> {
-    const userId = user.sub as string;
+  getUserChats(
+    @AuthenticatedUser() user: KeycloakJWT,
+  ): Promise<ChatResponseDto[]> {
+    const userId = user.sub;
     return this.chatService.getUserChats(userId);
   }
 
@@ -138,10 +141,10 @@ export class ChatController {
     errorCode: 'NOT_FOUND',
   })
   getChatById(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Param('chatId') chatId: string,
   ): Promise<ChatResponseDto> {
-    const userId = user.sub as string;
+    const userId = user.sub;
     return this.chatService.getChatById(chatId, userId);
   }
 
@@ -168,11 +171,11 @@ export class ChatController {
     errorCode: 'NOT_FOUND',
   })
   async getChatMessages(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Param('chatId') chatId: string,
     @Query() cursorPageOptionsDto: CursorPageOptionsDto,
   ): Promise<CursorPaginatedDto<MessageResponseDto>> {
-    const userId = user.sub as string;
+    const userId = user.sub;
     return await this.chatService.getChatMessages(
       chatId,
       userId,
@@ -212,11 +215,11 @@ export class ChatController {
     errorCode: 'NOT_FOUND',
   })
   async sendMessage(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Param('chatId') chatId: string,
     @Body() dto: SendMessageDto,
   ): Promise<MessageResponseDto> {
-    const senderId = user.sub as string;
+    const senderId = user.sub;
 
     // Send message via service (saves to DB)
     const message = await this.chatService.sendMessage(chatId, senderId, dto);
@@ -270,12 +273,12 @@ export class ChatController {
     errorCode: 'NOT_FOUND',
   })
   async updateMessage(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Param('chatId') chatId: string,
     @Param('messageId') messageId: string,
     @Body() dto: SendMessageDto,
   ): Promise<MessageResponseDto> {
-    const userId = user.sub as string;
+    const userId = user.sub;
 
     // Update message via service
     const updatedMessage = await this.chatService.updateMessage(
@@ -334,11 +337,11 @@ export class ChatController {
     errorCode: 'NOT_FOUND',
   })
   async deleteMessage(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Param('chatId') chatId: string,
     @Param('messageId') messageId: string,
   ): Promise<MessageResponseDto> {
-    const userId = user.sub as string;
+    const userId = user.sub;
 
     // Delete message via service (soft delete)
     const deletedMessage = await this.chatService.deleteMessage(
@@ -395,11 +398,11 @@ export class ChatController {
     errorCode: 'NOT_FOUND',
   })
   async addMemberToChat(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: KeycloakJWT,
     @Param('chatId') chatId: string,
     @Body() dto: AddMemberDto,
   ): Promise<ChatResponseDto> {
-    const requesterId = user.sub as string;
+    const requesterId = user.sub;
 
     // Add member via service
     const updatedChat = await this.chatService.addMemberToChat(
