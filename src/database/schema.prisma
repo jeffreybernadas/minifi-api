@@ -14,6 +14,27 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum LinkStatus {
+  ACTIVE
+  SCHEDULED
+  DISABLED
+  ARCHIVED
+}
+
+enum SecurityStatus {
+  PENDING
+  SAFE
+  SUSPICIOUS
+  MALICIOUS
+  ADULT_CONTENT
+}
+
+enum UserType {
+  GUEST
+  FREE
+  PRO
+}
 model User {
   id String @id // Keycloak sub (UUID) - NOT auto-generated
 
@@ -29,11 +50,17 @@ model User {
   avatarUrl   String?
   address     String?
 
+  // URL shortener
+  userType UserType @default(FREE)
+  links    Link[]
+  tags     Tag[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([username])
+  @@index([userType])
 }
 
 enum ChatType {
@@ -102,4 +129,132 @@ model MessageRead {
   @@index([userId])
   @@index([messageId])
   @@index([readAt])
+}
+
+model Link {
+  id          String     @id @default(uuid())
+  userId      String?    // NULLABLE for guest users
+  originalUrl String     @db.Text
+  shortCode   String     @unique
+  customAlias String?    @unique
+  title       String?    @db.VarChar(200)
+  description String?    @db.Text
+  status      LinkStatus @default(ACTIVE)
+
+  // Guest user tracking
+  isGuest         Boolean @default(false)
+  guestIpAddress  String? @db.VarChar(45) // For rate limiting
+  guestUserAgent  String? @db.Text        // For analytics
+
+  // Security (Phase 2 placeholder)
+  securityStatus SecurityStatus @default(PENDING)
+  securityScore  Float?
+  scannedAt      DateTime?
+
+  // Advanced features
+  password    String?
+  scheduledAt DateTime?
+  expiresAt   DateTime?
+  clickLimit  Int?
+  isOneTime   Boolean   @default(false)
+  isArchived  Boolean   @default(false)
+  notes       String?   @db.Text
+
+  // Analytics counters
+  clickCount       Int       @default(0)
+  uniqueClickCount Int       @default(0)
+  lastClickedAt    DateTime?
+
+  // QR code
+  qrCodeUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics LinkAnalytics[]
+  tags      LinkTag[]
+
+  @@index([userId])
+  @@index([shortCode])
+  @@index([customAlias])
+  @@index([status])
+  @@index([isArchived])
+  @@index([scheduledAt])
+  @@index([expiresAt])
+  @@index([isGuest])
+  @@index([guestIpAddress])
+  @@index([createdAt])
+}
+
+model LinkAnalytics {
+  id        String   @id @default(uuid())
+  linkId    String
+  clickedAt DateTime @default(now())
+
+  // Visitor tracking
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.Text
+
+  // Parsed data
+  browser        String?
+  browserVersion String?
+  os             String?
+  osVersion      String?
+  device         String?
+
+  // Geolocation
+  country     String?
+  countryCode String? @db.VarChar(2)
+  city        String?
+  region      String?
+  latitude    Float?
+  longitude   Float?
+
+  // Referrer & UTM
+  referrer    String? @db.Text
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmTerm     String?
+  utmContent  String?
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@index([clickedAt])
+  @@index([country])
+  @@index([device])
+}
+
+model Tag {
+  id     String @id @default(uuid())
+  userId String
+  name   String @db.VarChar(50)
+
+  // UI Colors - separate background and text for better contrast
+  backgroundColor String @db.VarChar(7) @default("#3B82F6")
+  textColor       String @db.VarChar(7) @default("#FFFFFF")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links LinkTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model LinkTag {
+  id     String @id @default(uuid())
+  linkId String
+  tagId  String
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([linkId, tagId])
+  @@index([linkId])
+  @@index([tagId])
 }
