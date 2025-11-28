@@ -1,7 +1,7 @@
 {
   "name": "nest-starter",
   "version": "0.0.1",
-  "description": "A personal, production-ready NestJS starter template with enterprise-grade features.",
+  "description": "The api for my minifi project, an advanced URL shortener platform",
   "author": {
     "name": "Jeffrey Bernadas",
     "email": "jeffrey.bernadas0@gmail.com",
