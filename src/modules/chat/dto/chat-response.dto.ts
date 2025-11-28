@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ChatType } from '@prisma/client';
+import { ChatType } from '@/generated/prisma/client';
 import { ChatMemberDto } from './chat-member.dto';
 
 /**

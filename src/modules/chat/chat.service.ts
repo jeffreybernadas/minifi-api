@@ -11,7 +11,7 @@ import { ChatResponseDto } from './dto/chat-response.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { AddMemberDto } from './dto/add-member.dto';
-import { ChatType } from '@prisma/client';
+import { ChatType } from '@/generated/prisma/client';
 import {
   CursorPageOptionsDto,
   CursorPaginatedDto,

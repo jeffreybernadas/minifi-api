@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/database/database.service';
 import { LoggerService } from '@/shared/logger/logger.service';
-import { User } from '@prisma/client';
+import { User } from '@/generated/prisma/client';
 import { KeycloakJWT } from './interfaces/keycloak-jwt.interface';
 
 /**

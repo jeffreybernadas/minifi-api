@@ -8,7 +8,7 @@ import {
   ValidateIf,
   ArrayMaxSize,
 } from 'class-validator';
-import { ChatType } from '@prisma/client';
+import { ChatType } from '@/generated/prisma/client';
 
 /**
  * DTO for creating a new chat

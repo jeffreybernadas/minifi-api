@@ -12,7 +12,7 @@ import {
 import { Socket } from 'socket.io';
 import { CustomErrorException } from '@/filters/exceptions/custom-error.exception';
 import { CustomWsErrorException } from '@/filters/exceptions/websocket-error.exception';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma';
 import { WebSocketErrorResponse } from '@/common/interfaces/websocket.interface';
 import { SentryExceptionCaptured } from '@sentry/nestjs';
 
