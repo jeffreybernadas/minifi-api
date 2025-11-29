@@ -26,12 +26,24 @@ import {
 import { generateShortCode } from '@/utils/shortcode/shortcode.util';
 import { hashPassword, verifyPassword } from '@/utils/password/password.util';
 import { generateQRCodeBuffer } from '@/utils/qrcode/qrcode.util';
+import {
+  generateVisitorId,
+  extractReferrerDomain,
+} from '@/utils/visitor/visitor-id.util';
+import { LoggerService } from '@/shared/logger/logger.service';
+import UAParser from 'ua-parser-js';
+import * as geoip from 'geoip-lite';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateGuestLinkDto } from './dto/create-guest-link.dto';
 import { UpdateLinkDto } from './dto/update-link.dto';
 import { LinkResponseDto } from './dto/link-response.dto';
 import { LinkFilterDto } from './dto/link-filter.dto';
 import { VerifyPasswordDto } from './dto/verify-password.dto';
+import {
+  LinkAnalyticsResponseDto,
+  LinkAnalyticsSummaryDto,
+} from './dto/analytics-response.dto';
+import { AnalyticsFilterDto } from './dto/analytics-filter.dto';
 import { CustomErrorException } from '@/filters/exceptions/custom-error.exception';
 import { CustomErrorCode } from '@/enums/custom-error-enum';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination';
@@ -48,6 +60,7 @@ export class LinkService {
     private readonly prisma: PrismaService,
     @Inject(MINIO_CONNECTION) private readonly minioClient: MinioClient,
     private readonly configService: ConfigService<GlobalConfig>,
+    private readonly logger: LoggerService,
   ) {}
 
   async createLink(
@@ -482,62 +495,310 @@ export class LinkService {
       throw new ForbiddenException('Link is scheduled and not yet active');
     }
 
-    return link;
-  }
-
-  async incrementClickCount(linkId: string): Promise<void> {
-    const link = await this.prisma.link.findUnique({ where: { id: linkId } });
-
-    if (!link) {
-      throw new NotFoundException('Link not found');
-    }
-
+    // Check click limit
     if (link.clickLimit && link.clickCount >= link.clickLimit) {
       await this.prisma.link.update({
-        where: { id: linkId },
+        where: { id: link.id },
         data: { status: LinkStatus.DISABLED, isArchived: true },
       });
       throw new ForbiddenException('Link has reached its click limit');
     }
 
+    // Check one-time link
     if (link.isOneTime && link.clickCount >= 1) {
-      await this.prisma.link.delete({
-        where: { id: linkId },
-      });
-      throw new NotFoundException('Link not found');
+      throw new ForbiddenException('This one-time link has already been used');
     }
 
-    const newClickCount = link.clickCount + 1;
+    return link;
+  }
 
-    // For one-time links: increment count, then hard delete (self-destruct)
-    if (link.isOneTime) {
+  /**
+   * Increment click count - fire-and-forget safe (never throws)
+   * Validation is done in resolveShortCode before this is called
+   */
+  async incrementClickCount(linkId: string): Promise<void> {
+    try {
+      const link = await this.prisma.link.findUnique({
+        where: { id: linkId },
+      });
+
+      if (!link) return; // Already validated in resolveShortCode
+
+      // One-time links: delete
+      if (link.isOneTime) {
+        await this.prisma.link.delete({ where: { id: linkId } });
+        return;
+      }
+
+      // Regular links: just increment
       await this.prisma.link.update({
         where: { id: linkId },
+        data: { clickCount: { increment: 1 }, lastClickedAt: new Date() },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to increment click count for ${linkId}`,
+        'LinkService',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  /**
+   * Track link click with detailed analytics - fire-and-forget safe (never throws)
+   */
+  async trackLinkClick(
+    linkId: string,
+    context?: {
+      ip?: string;
+      userAgent?: string;
+      referrer?: string;
+      utms?: {
+        utm_source?: string;
+        utm_medium?: string;
+        utm_campaign?: string;
+        utm_term?: string;
+        utm_content?: string;
+      };
+    },
+  ): Promise<void> {
+    try {
+      const link = await this.prisma.link.findUnique({
+        where: { id: linkId },
+      });
+      if (!link) return;
+
+      // Parse user agent
+      const parser = new UAParser(context?.userAgent);
+      const ua = parser.getResult();
+
+      // Lookup geolocation
+      const geo = context?.ip ? geoip.lookup(context.ip) : null;
+
+      // Generate visitor ID (hash of IP + UA)
+      const visitorId = generateVisitorId(context?.ip, context?.userAgent);
+
+      // Extract referrer domain
+      const referrerDomain = extractReferrerDomain(context?.referrer);
+
+      // Check if this is a unique visitor
+      const existingVisit = await this.prisma.linkAnalytics.findFirst({
+        where: { linkId, visitorId },
+        select: { id: true },
+      });
+      const isUnique = !existingVisit;
+
+      // Create analytics record
+      await this.prisma.linkAnalytics.create({
         data: {
-          clickCount: { increment: 1 },
-          lastClickedAt: new Date(),
+          linkId,
+          visitorId,
+          isUnique,
+          clickedAt: new Date(),
+          ipAddress: context?.ip,
+          userAgent: context?.userAgent,
+          browser: ua.browser.name ?? undefined,
+          browserVersion: ua.browser.version ?? undefined,
+          os: ua.os.name ?? undefined,
+          osVersion: ua.os.version ?? undefined,
+          device: ua.device.type ?? 'desktop',
+          country: geo?.country,
+          countryCode: geo?.country,
+          city: geo?.city,
+          region: geo?.region,
+          latitude: geo?.ll?.[0],
+          longitude: geo?.ll?.[1],
+          referrer: context?.referrer,
+          referrerDomain,
+          utmSource: context?.utms?.utm_source,
+          utmMedium: context?.utms?.utm_medium,
+          utmCampaign: context?.utms?.utm_campaign,
+          utmTerm: context?.utms?.utm_term,
+          utmContent: context?.utms?.utm_content,
         },
       });
 
-      // Hard delete the one-time link after successful first use
-      await this.prisma.link.delete({
-        where: { id: linkId },
-      });
+      // Update unique click count if this is a new visitor
+      if (isUnique) {
+        await this.prisma.link.update({
+          where: { id: linkId },
+          data: { uniqueClickCount: { increment: 1 } },
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to track click for link ${linkId}`,
+        'LinkService',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
 
-      return;
+  /**
+   * Get paginated link analytics
+   */
+  async getLinkAnalytics(
+    linkId: string,
+    userId: string,
+    filters: AnalyticsFilterDto,
+  ): Promise<OffsetPaginatedDto<LinkAnalyticsResponseDto>> {
+    // Verify ownership
+    const link = await this.prisma.link.findFirst({
+      where: { id: linkId, userId },
+    });
+    if (!link) {
+      throw new NotFoundException('Link not found');
     }
 
-    // For regular links: increment count and handle click limits
-    await this.prisma.link.update({
-      where: { id: linkId },
-      data: {
-        clickCount: { increment: 1 },
-        lastClickedAt: new Date(),
-        ...(link.clickLimit && newClickCount >= link.clickLimit
-          ? { status: LinkStatus.DISABLED, isArchived: true }
-          : {}),
-      },
+    // Build where clause with filters
+    const where: Prisma.LinkAnalyticsWhereInput = {
+      linkId,
+      ...(filters.countryCode && { countryCode: filters.countryCode }),
+      ...(filters.device && { device: filters.device }),
+      ...(filters.search && {
+        OR: [
+          { referrer: { contains: filters.search, mode: 'insensitive' } },
+          { utmSource: { contains: filters.search, mode: 'insensitive' } },
+          { utmCampaign: { contains: filters.search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    // Paginate
+    const paginated = await offsetPaginateWithPrisma(
+      this.prisma.linkAnalytics,
+      filters,
+      { where, orderBy: { clickedAt: 'desc' } },
+    );
+
+    return {
+      ...paginated,
+      data: paginated.data as LinkAnalyticsResponseDto[],
+    };
+  }
+
+  /**
+   * Get analytics summary with aggregations
+   */
+  async getAnalyticsSummary(
+    linkId: string,
+    userId: string,
+  ): Promise<LinkAnalyticsSummaryDto> {
+    // Verify ownership
+    const link = await this.prisma.link.findFirst({
+      where: { id: linkId, userId },
     });
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    // Run all aggregations in parallel
+    const [
+      totalClicks,
+      uniqueVisitors,
+      byCountry,
+      byCity,
+      byDevice,
+      byBrowser,
+      byReferrer,
+      clicksByDate,
+    ] = await Promise.all([
+      // Total clicks
+      this.prisma.linkAnalytics.count({ where: { linkId } }),
+
+      // Unique visitors
+      this.prisma.linkAnalytics.count({
+        where: { linkId, isUnique: true },
+      }),
+
+      // Top 5 countries
+      this.prisma.linkAnalytics.groupBy({
+        by: ['country'],
+        _count: { country: true },
+        where: { linkId, country: { not: null } },
+        orderBy: { _count: { country: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 cities
+      this.prisma.linkAnalytics.groupBy({
+        by: ['city'],
+        _count: { city: true },
+        where: { linkId, city: { not: null } },
+        orderBy: { _count: { city: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 devices
+      this.prisma.linkAnalytics.groupBy({
+        by: ['device'],
+        _count: { device: true },
+        where: { linkId, device: { not: null } },
+        orderBy: { _count: { device: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 browsers
+      this.prisma.linkAnalytics.groupBy({
+        by: ['browser'],
+        _count: { browser: true },
+        where: { linkId, browser: { not: null } },
+        orderBy: { _count: { browser: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 referrers by domain
+      this.prisma.linkAnalytics.groupBy({
+        by: ['referrerDomain'],
+        _count: { referrerDomain: true },
+        where: { linkId, referrerDomain: { not: null } },
+        orderBy: { _count: { referrerDomain: 'desc' } },
+        take: 5,
+      }),
+
+      // Clicks by date (last 30 days)
+      this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+        SELECT
+          DATE("clickedAt") as date,
+          COUNT(*)::bigint as count
+        FROM "LinkAnalytics"
+        WHERE "linkId" = ${linkId}
+        GROUP BY DATE("clickedAt")
+        ORDER BY DATE("clickedAt") DESC
+        LIMIT 30
+      `,
+    ]);
+
+    return {
+      totalClicks,
+      uniqueVisitors,
+      clicksByDate: clicksByDate
+        .filter((row) => row.date != null)
+        .map((row) => ({
+          date: row.date.toISOString().split('T')[0]!,
+          count: Number(row.count),
+        })),
+      topCountries: byCountry.map((item) => ({
+        country: item.country!,
+        count: item._count.country,
+      })),
+      topCities: byCity.map((item) => ({
+        city: item.city!,
+        count: item._count.city,
+      })),
+      topDevices: byDevice.map((item) => ({
+        device: item.device!,
+        count: item._count.device,
+      })),
+      topBrowsers: byBrowser.map((item) => ({
+        browser: item.browser!,
+        count: item._count.browser,
+      })),
+      topReferrers: byReferrer.map((item) => ({
+        referrer: item.referrerDomain!,
+        count: item._count.referrerDomain,
+      })),
+    };
   }
 
   async verifyLinkPassword(

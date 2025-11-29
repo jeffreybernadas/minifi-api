@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Req } from '@nestjs/common';
 import { Public } from 'nest-keycloak-connect';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { LinkService } from './link.service';
 import { VerifyPasswordDto } from './dto/verify-password.dto';
 import {
@@ -44,6 +45,7 @@ export class RedirectController {
   })
   async getRedirectInfo(
     @Param('code') code: string,
+    @Req() req: Request,
   ): Promise<RedirectResponseDto> {
     const link = await this.linkService.resolveShortCode(code);
 
@@ -51,7 +53,8 @@ export class RedirectController {
       return { requiresPassword: true, code };
     }
 
-    await this.trackClickAsync(link.id);
+    // Fire-and-forget tracking
+    await this.trackClickAsync(link.id, req);
 
     return {
       requiresPassword: false,
@@ -91,6 +94,7 @@ export class RedirectController {
   async verifyPassword(
     @Param('code') code: string,
     @Body() dto: VerifyPasswordDto,
+    @Req() req: Request,
   ): Promise<VerifyPasswordResponseDto> {
     const isValid = await this.linkService.verifyLinkPassword(code, dto);
 
@@ -99,7 +103,9 @@ export class RedirectController {
     }
 
     const link = await this.linkService.resolveShortCode(code);
-    await this.trackClickAsync(link.id);
+
+    // Fire-and-forget tracking
+    await this.trackClickAsync(link.id, req);
 
     return {
       success: true,
@@ -108,7 +114,34 @@ export class RedirectController {
     };
   }
 
-  private async trackClickAsync(linkId: string): Promise<void> {
+  /**
+   * Track click in background (fire-and-forget)
+   * Both methods handle errors internally - safe to call without await
+   */
+  private async trackClickAsync(linkId: string, req: Request): Promise<void> {
+    const ip =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress;
+
+    const userAgent = req.headers['user-agent'];
+    const referrer = req.headers.referer || req.headers.referrer;
+
+    const utms = {
+      utm_source: req.query.utm_source as string | undefined,
+      utm_medium: req.query.utm_medium as string | undefined,
+      utm_campaign: req.query.utm_campaign as string | undefined,
+      utm_term: req.query.utm_term as string | undefined,
+      utm_content: req.query.utm_content as string | undefined,
+    };
+
+    // Fire-and-forget: start both operations without awaiting
     await this.linkService.incrementClickCount(linkId);
+    await this.linkService.trackLinkClick(linkId, {
+      ip,
+      userAgent,
+      referrer: referrer as string | undefined,
+      utms,
+    });
   }
 }

@@ -192,7 +192,9 @@ model LinkAnalytics {
   linkId    String
   clickedAt DateTime @default(now())
 
-  // Visitor tracking
+  // Visitor tracking (privacy-preserving)
+  visitorId String  @db.VarChar(64) // SHA-256 hash of IP + UA
+  isUnique  Boolean @default(false) // True for first visit from this visitor
   ipAddress String? @db.VarChar(45)
   userAgent String? @db.Text
 
@@ -212,19 +214,23 @@ model LinkAnalytics {
   longitude   Float?
 
   // Referrer & UTM
-  referrer    String? @db.Text
-  utmSource   String?
-  utmMedium   String?
-  utmCampaign String?
-  utmTerm     String?
-  utmContent  String?
+  referrer       String? @db.Text
+  referrerDomain String? // Extracted domain from referrer URL
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmTerm        String?
+  utmContent     String?
 
   link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
 
   @@index([linkId])
+  @@index([visitorId])
+  @@index([isUnique])
   @@index([clickedAt])
   @@index([country])
   @@index([device])
+  @@index([referrerDomain])
 }
 
 model Tag {

@@ -25,6 +25,11 @@ import {
 } from '@/decorators/swagger.decorator';
 import { LinkResponseDto } from './dto/link-response.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination';
+import {
+  LinkAnalyticsResponseDto,
+  LinkAnalyticsSummaryDto,
+} from './dto/analytics-response.dto';
+import { AnalyticsFilterDto } from './dto/analytics-filter.dto';
 import { QrCodeResponseDto } from './dto/qr-code-response.dto';
 
 @ApiTags('links')
@@ -305,5 +310,58 @@ export class LinkController {
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     return this.linkService.deleteLink(id, user.sub);
+  }
+
+  @Get(':id/analytics')
+  @ApiOperation({
+    summary: 'Get link analytics (paginated detail)',
+    description:
+      'Returns click-level analytics for a link (IP, UA, geo, UTM, referrer). User must own the link.',
+  })
+  @ApiPaginatedResponse(LinkAnalyticsResponseDto)
+  @ApiStandardErrorResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Link does not exist or user is not the owner',
+    errorCode: 'NOT_FOUND',
+  })
+  getLinkAnalytics(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Param('id') id: string,
+    @Query() filters: AnalyticsFilterDto,
+  ): Promise<OffsetPaginatedDto<LinkAnalyticsResponseDto>> {
+    return this.linkService.getLinkAnalytics(id, user.sub, filters);
+  }
+
+  @Get(':id/analytics/summary')
+  @ApiOperation({
+    summary: 'Get link analytics summary',
+    description:
+      'Returns summary analytics for a link: total clicks, unique visitors, top countries/cities/devices/browsers/referrers, and clicks by date. User must own the link.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Analytics summary retrieved successfully',
+    type: LinkAnalyticsSummaryDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Link does not exist or user is not the owner',
+    errorCode: 'NOT_FOUND',
+  })
+  getAnalyticsSummary(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Param('id') id: string,
+  ): Promise<LinkAnalyticsSummaryDto> {
+    return this.linkService.getAnalyticsSummary(id, user.sub);
   }
 }
