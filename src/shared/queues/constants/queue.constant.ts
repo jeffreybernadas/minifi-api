@@ -9,6 +9,7 @@
 export const QUEUE_EXCHANGES = {
   EMAIL: 'email.exchange',
   CHAT: 'chat.exchange',
+  SCAN: 'scan.exchange',
 } as const;
 
 /**
@@ -20,6 +21,9 @@ export const QUEUE_NAMES = {
 
   // Chat queues
   CHAT_UNREAD_DIGEST: 'chat.unread.digest',
+
+  // URL scan queues
+  SCAN_URL: 'scan.url',
 } as const;
 
 /**
@@ -31,4 +35,7 @@ export const QUEUE_ROUTING_KEYS = {
 
   // Chat routing keys
   CHAT_UNREAD_DIGEST: 'chat.unread.digest',
+
+  // URL scan routing keys
+  SCAN_URL: 'scan.url',
 } as const;

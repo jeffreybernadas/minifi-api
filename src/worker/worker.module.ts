@@ -10,6 +10,7 @@ import redisConfig from '@/config/redis/redis.config';
 import elasticsearchConfig from '@/config/elasticsearch/elasticsearch.config';
 import rabbitmqConfig from '@/config/rabbitmq/rabbitmq.config';
 import resendConfig from '@/config/resend/resend.config';
+import openaiConfig from '@/config/openai/openai.config';
 
 // Shared modules
 import { DatabaseModule } from '@/database/database.module';
@@ -22,6 +23,9 @@ import { ChatQueueModule } from '@/shared/queues/chat/chat.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { QUEUE_EXCHANGES } from '@/shared/queues/constants/queue.constant';
 import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
+import { ScanQueueModule } from '@/shared/queues/scan/scan.module';
+import { ScanConsumer } from '@/shared/queues/scan/scan.consumer';
+import { UrlScanService } from '@/shared/scan/url-scan.service';
 
 /**
  * Worker Module
@@ -50,6 +54,7 @@ import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
         elasticsearchConfig,
         rabbitmqConfig,
         resendConfig,
+        openaiConfig,
       ],
     }),
 
@@ -87,6 +92,10 @@ import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
             name: QUEUE_EXCHANGES.CHAT,
             type: 'topic',
           },
+          {
+            name: QUEUE_EXCHANGES.SCAN,
+            type: 'topic',
+          },
         ],
         connectionInitOptions: { wait: false },
       }),
@@ -108,8 +117,9 @@ import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
     // Queue modules (contain consumers and cron jobs)
     EmailQueueModule,
     ChatQueueModule,
+    ScanQueueModule,
   ],
-  providers: [LinkSchedulerCron],
+  providers: [LinkSchedulerCron, ScanConsumer, UrlScanService],
   exports: [RabbitMQModule],
 })
 export class WorkerModule {}
