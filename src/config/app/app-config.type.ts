@@ -7,4 +7,5 @@ export type AppConfig = {
   appPrefix: string;
   url: string;
   port: number;
+  enableUrlScan: boolean;
 };

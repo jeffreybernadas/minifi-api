@@ -43,6 +43,10 @@ class EnvironmentVariablesValidator {
   @Max(65535)
   @IsOptional()
   PORT: number;
+
+  @IsBoolean()
+  @IsOptional()
+  ENABLE_URL_SCAN: boolean;
 }
 
 export function getConfig(): AppConfig {
@@ -55,6 +59,7 @@ export function getConfig(): AppConfig {
     appPrefix: kebabCase(process.env.APP_NAME ?? 'nest-starter'),
     url: process.env.APP_URL ?? `http://localhost:${port}`,
     port,
+    enableUrlScan: process.env.ENABLE_URL_SCAN === 'true',
   };
 }
 

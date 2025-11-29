@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LinkStatus } from '@/generated/prisma/client';
+import { LinkStatus, ScanStatus } from '@/generated/prisma/client';
+
+class ScanDetailsDto {
+  @ApiPropertyOptional({ type: [String] })
+  threats?: string[];
+
+  @ApiPropertyOptional()
+  reasoning?: string;
+
+  @ApiPropertyOptional()
+  recommendations?: string;
+}
 
 export class LinkResponseDto {
   @ApiProperty() id: string;
@@ -17,6 +28,16 @@ export class LinkResponseDto {
   @ApiProperty() isOneTime: boolean;
   @ApiProperty() isArchived: boolean;
   @ApiPropertyOptional() notes?: string | null;
+  @ApiProperty({ enum: ScanStatus })
+  scanStatus: ScanStatus;
+  @ApiPropertyOptional()
+  scanScore?: number | null;
+  @ApiPropertyOptional({ type: ScanDetailsDto })
+  scanDetails?: ScanDetailsDto | null;
+  @ApiPropertyOptional()
+  scannedAt?: Date | null;
+  @ApiPropertyOptional()
+  lastScanVersion?: string | null;
   @ApiProperty() clickCount: number;
   @ApiProperty() uniqueClickCount: number;
   @ApiPropertyOptional() lastClickedAt?: Date | null;

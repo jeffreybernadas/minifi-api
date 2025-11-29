@@ -42,6 +42,7 @@ import stripeConfig from '@/config/stripe/stripe.config';
 import sentryConfig from '@/config/sentry/sentry.config';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { ScheduleModule } from '@nestjs/schedule';
+import openaiConfig from '@/config/openai/openai.config';
 
 /**
  * App Module
@@ -71,6 +72,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         rabbitmqConfig,
         stripeConfig,
         sentryConfig,
+        openaiConfig,
       ],
     }),
     DatabaseModule,
@@ -147,6 +149,10 @@ import { ScheduleModule } from '@nestjs/schedule';
           },
           {
             name: QUEUE_EXCHANGES.CHAT,
+            type: 'topic',
+          },
+          {
+            name: QUEUE_EXCHANGES.SCAN,
             type: 'topic',
           },
         ],
