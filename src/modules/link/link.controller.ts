@@ -191,6 +191,29 @@ export class LinkController {
     return this.linkService.updateLink(id, user.sub, dto);
   }
 
+  @Post(':id/rescan')
+  @ApiOperation({
+    summary: 'Request URL scan for a link',
+    description:
+      'Queues a URL scan using OpenAI and resets the link scan status to PENDING. Returns the link data immediately.',
+  })
+  @ApiStandardResponse({
+    status: 202,
+    description: 'Rescan queued; scan status set to PENDING',
+    type: LinkResponseDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Link does not exist or user is not the owner',
+    errorCode: 'NOT_FOUND',
+  })
+  requestScan(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Param('id') id: string,
+  ): Promise<LinkResponseDto> {
+    return this.linkService.requestScan(id, user.sub, true);
+  }
+
   @Post(':id/qr')
   @ApiOperation({
     summary: 'Generate a QR code for a link',

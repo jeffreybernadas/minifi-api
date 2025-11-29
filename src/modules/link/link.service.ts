@@ -10,7 +10,7 @@ import { PrismaService } from '@/database/database.service';
 import {
   Link,
   LinkStatus,
-  SecurityStatus,
+  ScanStatus,
   UserType,
   Prisma,
 } from '@/generated/prisma/client';
@@ -53,6 +53,8 @@ import { Client as MinioClient } from 'minio';
 import { ConfigService } from '@nestjs/config';
 import { GlobalConfig } from '@/config/config.type';
 import { QrCodeResponseDto } from './dto/qr-code-response.dto';
+import { ScanProducer } from '@/shared/queues/scan/scan.producer';
+import { UrlScanDetails } from '@/common/interfaces/scan.interface';
 
 @Injectable()
 export class LinkService {
@@ -61,6 +63,7 @@ export class LinkService {
     @Inject(MINIO_CONNECTION) private readonly minioClient: MinioClient,
     private readonly configService: ConfigService<GlobalConfig>,
     private readonly logger: LoggerService,
+    private readonly scanProducer: ScanProducer,
   ) {}
 
   async createLink(
@@ -139,7 +142,7 @@ export class LinkService {
         isArchived: false,
         notes: dto.notes,
         password: passwordHash,
-        securityStatus: SecurityStatus.PENDING,
+        scanStatus: ScanStatus.PENDING,
         tags: dto.tagIds?.length
           ? {
               create: dto.tagIds.map((tagId) => ({
@@ -149,6 +152,8 @@ export class LinkService {
           : undefined,
       },
     });
+
+    await this.enqueueScan(link.id, link.originalUrl, userId);
 
     return this.mapToLinkResponse(link);
   }
@@ -177,7 +182,7 @@ export class LinkService {
         shortCode,
         status: LinkStatus.ACTIVE,
         expiresAt,
-        securityStatus: SecurityStatus.PENDING,
+        scanStatus: ScanStatus.PENDING,
       },
     });
 
@@ -353,6 +358,35 @@ export class LinkService {
           : {}),
       },
     });
+
+    return this.mapToLinkResponse(updated);
+  }
+
+  async requestScan(
+    id: string,
+    userId: string,
+    force = false,
+  ): Promise<LinkResponseDto> {
+    const link = await this.prisma.link.findFirst({
+      where: { id, userId },
+    });
+
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    const updated = await this.prisma.link.update({
+      where: { id },
+      data: {
+        scanStatus: ScanStatus.PENDING,
+        scanScore: null,
+        scanDetails: {},
+        scannedAt: null,
+        lastScanVersion: null,
+      },
+    });
+
+    await this.enqueueScan(updated.id, updated.originalUrl, userId, force);
 
     return this.mapToLinkResponse(updated);
   }
@@ -907,6 +941,11 @@ export class LinkService {
       isOneTime: link.isOneTime,
       isArchived: link.isArchived,
       notes: link.notes,
+      scanStatus: link.scanStatus,
+      scanScore: link.scanScore,
+      scanDetails: this.extractScanDetails(link),
+      scannedAt: link.scannedAt,
+      lastScanVersion: link.lastScanVersion,
       clickCount: link.clickCount,
       uniqueClickCount: link.uniqueClickCount,
       lastClickedAt: link.lastClickedAt,
@@ -914,6 +953,40 @@ export class LinkService {
       createdAt: link.createdAt,
       updatedAt: link.updatedAt,
     };
+  }
+
+  private async enqueueScan(
+    linkId: string,
+    url: string,
+    requestedBy?: string,
+    force = false,
+  ): Promise<void> {
+    const enableUrlScan = this.configService.get<boolean>('app.enableUrlScan', {
+      infer: true,
+    });
+
+    if (!enableUrlScan) {
+      this.logger.warn(
+        `URL scan skipped (feature disabled) for link ${linkId}`,
+        'LinkService',
+      );
+      return;
+    }
+
+    try {
+      await this.scanProducer.queueScan({
+        linkId,
+        url,
+        requestedBy,
+        force,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to enqueue URL scan for link ${linkId}`,
+        'LinkService',
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   private getDefaultExpiry(userType: UserType): Date {
@@ -947,5 +1020,9 @@ export class LinkService {
         'One or more tags do not belong to the user',
       );
     }
+  }
+
+  private extractScanDetails(link: Link): UrlScanDetails {
+    return link.scanDetails as unknown as UrlScanDetails;
   }
 }
