@@ -344,7 +344,7 @@ export class LinkService {
     return this.mapToLinkResponse(updated);
   }
 
-  async deleteLink(id: string, userId: string): Promise<LinkResponseDto> {
+  async deleteLink(id: string, userId: string): Promise<{ success: boolean }> {
     const link = await this.prisma.link.findFirst({
       where: { id, userId },
     });
@@ -353,9 +353,61 @@ export class LinkService {
       throw new NotFoundException('Link not found');
     }
 
+    // Hard delete - permanently remove from database
+    await this.prisma.link.delete({
+      where: { id },
+    });
+
+    return { success: true };
+  }
+
+  async archiveLink(id: string, userId: string): Promise<LinkResponseDto> {
+    const link = await this.prisma.link.findFirst({
+      where: { id, userId },
+    });
+
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    if (link.isArchived) {
+      throw new BadRequestException('Link is already archived');
+    }
+
     const updated = await this.prisma.link.update({
       where: { id },
       data: { isArchived: true, status: LinkStatus.ARCHIVED },
+    });
+
+    return this.mapToLinkResponse(updated);
+  }
+
+  async unarchiveLink(id: string, userId: string): Promise<LinkResponseDto> {
+    const link = await this.prisma.link.findFirst({
+      where: { id, userId },
+    });
+
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    if (!link.isArchived) {
+      throw new BadRequestException('Link is not archived');
+    }
+
+    // Determine status when unarchiving
+    const now = new Date();
+    let status: LinkStatus = LinkStatus.ACTIVE;
+
+    if (link.scheduledAt && link.scheduledAt > now) {
+      status = LinkStatus.SCHEDULED;
+    } else if (link.expiresAt && link.expiresAt <= now) {
+      status = LinkStatus.DISABLED;
+    }
+
+    const updated = await this.prisma.link.update({
+      where: { id },
+      data: { isArchived: false, status },
     });
 
     return this.mapToLinkResponse(updated);

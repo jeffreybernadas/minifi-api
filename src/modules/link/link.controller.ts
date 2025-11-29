@@ -214,16 +214,81 @@ export class LinkController {
     return this.linkService.generateQrCode(id, user.sub);
   }
 
-  @Delete(':id')
+  @Patch(':id/archive')
   @ApiOperation({
     summary: 'Archive a link (soft delete)',
     description:
-      'Soft deletes a link by marking it as archived. The link becomes inactive and cannot be accessed, but data is preserved. User must be the owner of the link.',
+      'Archives a link by marking it as archived. The link becomes inactive and cannot be accessed via its short code, but all data is preserved in the database. Archived links can be restored using the unarchive endpoint. User must be the owner of the link.',
   })
   @ApiStandardResponse({
     status: 200,
     description: 'Link archived successfully',
     type: LinkResponseDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 400,
+    description: 'Bad Request - Link is already archived',
+    errorCode: 'BAD_REQUEST',
+  })
+  @ApiStandardErrorResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Link does not exist or user is not the owner',
+    errorCode: 'NOT_FOUND',
+  })
+  archiveLink(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Param('id') id: string,
+  ): Promise<LinkResponseDto> {
+    return this.linkService.archiveLink(id, user.sub);
+  }
+
+  @Patch(':id/unarchive')
+  @ApiOperation({
+    summary: 'Unarchive a link (restore)',
+    description:
+      'Restores an archived link by marking it as active. The link becomes accessible again via its short code. The status is intelligently determined: SCHEDULED if scheduledAt is in the future, DISABLED if already expired, or ACTIVE otherwise. User must be the owner of the link.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Link unarchived successfully',
+    type: LinkResponseDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 400,
+    description: 'Bad Request - Link is not archived',
+    errorCode: 'BAD_REQUEST',
+  })
+  @ApiStandardErrorResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Link does not exist or user is not the owner',
+    errorCode: 'NOT_FOUND',
+  })
+  unarchiveLink(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Param('id') id: string,
+  ): Promise<LinkResponseDto> {
+    return this.linkService.unarchiveLink(id, user.sub);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a link permanently (hard delete)',
+    description:
+      'Permanently deletes a link from the database. This action is irreversible and all associated data (analytics, tags) will also be deleted due to cascade constraints. The link cannot be recovered after deletion. For temporary hiding, use the archive endpoint instead. User must be the owner of the link.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Link permanently deleted successfully',
   })
   @ApiStandardErrorResponse({
     status: 401,
@@ -238,7 +303,7 @@ export class LinkController {
   deleteLink(
     @AuthenticatedUser() user: KeycloakJWT,
     @Param('id') id: string,
-  ): Promise<LinkResponseDto> {
+  ): Promise<{ success: boolean }> {
     return this.linkService.deleteLink(id, user.sub);
   }
 }
