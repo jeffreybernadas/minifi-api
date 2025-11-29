@@ -25,6 +25,7 @@ import {
 } from '@/decorators/swagger.decorator';
 import { LinkResponseDto } from './dto/link-response.dto';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination';
+import { QrCodeResponseDto } from './dto/qr-code-response.dto';
 
 @ApiTags('links')
 @ApiBearerAuth('JWT')
@@ -183,6 +184,34 @@ export class LinkController {
     @Body() dto: UpdateLinkDto,
   ): Promise<LinkResponseDto> {
     return this.linkService.updateLink(id, user.sub, dto);
+  }
+
+  @Post(':id/qr')
+  @ApiOperation({
+    summary: 'Generate a QR code for a link',
+    description:
+      'Generates a QR code pointing to the short URL and uploads it to storage. Returns the QR code URL and stores it on the link record.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'QR code generated successfully',
+    type: QrCodeResponseDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Link does not exist or user is not the owner',
+    errorCode: 'NOT_FOUND',
+  })
+  generateQrCode(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Param('id') id: string,
+  ) {
+    return this.linkService.generateQrCode(id, user.sub);
   }
 
   @Delete(':id')

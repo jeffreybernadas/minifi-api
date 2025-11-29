@@ -1,9 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpStatus,
   Injectable,
   NotFoundException,
+  Inject,
+  HttpStatus,
 } from '@nestjs/common';
 import { PrismaService } from '@/database/database.service';
 import {
@@ -24,6 +25,7 @@ import {
 } from '@/constants/link.constant';
 import { generateShortCode } from '@/utils/shortcode/shortcode.util';
 import { hashPassword, verifyPassword } from '@/utils/password/password.util';
+import { generateQRCodeBuffer } from '@/utils/qrcode/qrcode.util';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateGuestLinkDto } from './dto/create-guest-link.dto';
 import { UpdateLinkDto } from './dto/update-link.dto';
@@ -34,10 +36,19 @@ import { CustomErrorException } from '@/filters/exceptions/custom-error.exceptio
 import { CustomErrorCode } from '@/enums/custom-error-enum';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination';
 import { offsetPaginateWithPrisma } from '@/utils/pagination/prisma-pagination.util';
+import { MINIO_CONNECTION } from '@/constants/minio.constant';
+import { Client as MinioClient } from 'minio';
+import { ConfigService } from '@nestjs/config';
+import { GlobalConfig } from '@/config/config.type';
+import { QrCodeResponseDto } from './dto/qr-code-response.dto';
 
 @Injectable()
 export class LinkService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(MINIO_CONNECTION) private readonly minioClient: MinioClient,
+    private readonly configService: ConfigService<GlobalConfig>,
+  ) {}
 
   async createLink(
     userId: string,
@@ -350,6 +361,48 @@ export class LinkService {
     return this.mapToLinkResponse(updated);
   }
 
+  async generateQrCode(
+    linkId: string,
+    userId: string,
+  ): Promise<QrCodeResponseDto> {
+    const link = await this.prisma.link.findFirst({
+      where: { id: linkId, userId },
+    });
+
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    const shortUrl = `${this.configService.getOrThrow('app.url', { infer: true })}/${link.customAlias ?? link.shortCode}`;
+    const qrBuffer = await generateQRCodeBuffer(shortUrl);
+
+    const bucket = 'qr-codes';
+    const exists = await this.minioClient.bucketExists(bucket);
+    if (!exists) {
+      await this.minioClient.makeBucket(bucket);
+    }
+
+    const objectName = `qr-${linkId}.png`;
+    await this.minioClient.putObject(
+      bucket,
+      objectName,
+      qrBuffer,
+      qrBuffer.length,
+      {
+        'Content-Type': 'image/png',
+      },
+    );
+
+    const qrCodeUrl = `${this.configService.getOrThrow('minio.url', { infer: true })}/${bucket}/${objectName}`;
+
+    await this.prisma.link.update({
+      where: { id: linkId },
+      data: { qrCodeUrl },
+    });
+
+    return { qrCodeUrl };
+  }
+
   async resolveShortCode(code: string): Promise<Link> {
     const link = await this.prisma.link.findFirst({
       where: {
@@ -381,11 +434,56 @@ export class LinkService {
   }
 
   async incrementClickCount(linkId: string): Promise<void> {
+    const link = await this.prisma.link.findUnique({ where: { id: linkId } });
+
+    if (!link) {
+      throw new NotFoundException('Link not found');
+    }
+
+    if (link.clickLimit && link.clickCount >= link.clickLimit) {
+      await this.prisma.link.update({
+        where: { id: linkId },
+        data: { status: LinkStatus.DISABLED, isArchived: true },
+      });
+      throw new ForbiddenException('Link has reached its click limit');
+    }
+
+    if (link.isOneTime && link.clickCount >= 1) {
+      await this.prisma.link.delete({
+        where: { id: linkId },
+      });
+      throw new NotFoundException('Link not found');
+    }
+
+    const newClickCount = link.clickCount + 1;
+
+    // For one-time links: increment count, then hard delete (self-destruct)
+    if (link.isOneTime) {
+      await this.prisma.link.update({
+        where: { id: linkId },
+        data: {
+          clickCount: { increment: 1 },
+          lastClickedAt: new Date(),
+        },
+      });
+
+      // Hard delete the one-time link after successful first use
+      await this.prisma.link.delete({
+        where: { id: linkId },
+      });
+
+      return;
+    }
+
+    // For regular links: increment count and handle click limits
     await this.prisma.link.update({
       where: { id: linkId },
       data: {
         clickCount: { increment: 1 },
         lastClickedAt: new Date(),
+        ...(link.clickLimit && newClickCount >= link.clickLimit
+          ? { status: LinkStatus.DISABLED, isArchived: true }
+          : {}),
       },
     });
   }

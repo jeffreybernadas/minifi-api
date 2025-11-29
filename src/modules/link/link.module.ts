@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { LinkController } from './link.controller';
 import { RedirectController } from './redirect.controller';
 import { LinkService } from './link.service';
+import { TagController } from './tag.controller';
+import { TagService } from './tag.service';
 
 @Module({
-  controllers: [LinkController, RedirectController],
-  providers: [LinkService],
-  exports: [LinkService],
+  controllers: [LinkController, RedirectController, TagController],
+  providers: [LinkService, TagService],
+  exports: [LinkService, TagService],
 })
 export class LinkModule {}

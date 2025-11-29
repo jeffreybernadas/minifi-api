@@ -21,6 +21,7 @@ import { EmailQueueModule } from '@/shared/queues/email/email.module';
 import { ChatQueueModule } from '@/shared/queues/chat/chat.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { QUEUE_EXCHANGES } from '@/shared/queues/constants/queue.constant';
+import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
 
 /**
  * Worker Module
@@ -108,6 +109,7 @@ import { QUEUE_EXCHANGES } from '@/shared/queues/constants/queue.constant';
     EmailQueueModule,
     ChatQueueModule,
   ],
+  providers: [LinkSchedulerCron],
   exports: [RabbitMQModule],
 })
 export class WorkerModule {}
