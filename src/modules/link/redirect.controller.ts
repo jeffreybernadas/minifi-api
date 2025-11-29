@@ -12,6 +12,8 @@ import {
   ApiStandardResponse,
   ApiStandardErrorResponse,
 } from '@/decorators/swagger.decorator';
+import { Link, ScanStatus } from '@/generated/prisma/client';
+import { UrlScanDetails } from '@/common/interfaces/scan.interface';
 
 @Public()
 @ApiTags('redirect')
@@ -53,6 +55,8 @@ export class RedirectController {
       return { requiresPassword: true, code };
     }
 
+    const warning = this.buildScanWarning(link);
+
     // Fire-and-forget tracking
     await this.trackClickAsync(link.id, req);
 
@@ -60,6 +64,7 @@ export class RedirectController {
       requiresPassword: false,
       originalUrl: link.originalUrl,
       shortCode: link.shortCode,
+      ...(warning ? { warning } : {}),
     };
   }
 
@@ -103,6 +108,7 @@ export class RedirectController {
     }
 
     const link = await this.linkService.resolveShortCode(code);
+    const warning = this.buildScanWarning(link);
 
     // Fire-and-forget tracking
     await this.trackClickAsync(link.id, req);
@@ -111,6 +117,7 @@ export class RedirectController {
       success: true,
       originalUrl: link.originalUrl,
       shortCode: link.shortCode,
+      ...(warning ? { warning } : {}),
     };
   }
 
@@ -143,5 +150,29 @@ export class RedirectController {
       referrer: referrer as string | undefined,
       utms,
     });
+  }
+
+  private buildScanWarning(link: Link) {
+    const scanStatus = link.scanStatus;
+
+    if (
+      !link ||
+      scanStatus === ScanStatus.SAFE ||
+      scanStatus === ScanStatus.PENDING
+    ) {
+      return undefined;
+    }
+
+    const details = link.scanDetails as unknown as UrlScanDetails | undefined;
+
+    return {
+      isSafe: details?.isSafe,
+      status: scanStatus,
+      scanScore: link.scanScore,
+      threats: details?.threats,
+      reasoning: details?.reasoning,
+      recommendations: details?.recommendations,
+      scannedAt: link.scannedAt,
+    };
   }
 }
