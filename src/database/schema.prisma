@@ -22,7 +22,7 @@ enum LinkStatus {
   ARCHIVED
 }
 
-enum SecurityStatus {
+enum ScanStatus {
   PENDING
   SAFE
   SUSPICIOUS
@@ -146,10 +146,12 @@ model Link {
   guestIpAddress  String? @db.VarChar(45) // For rate limiting
   guestUserAgent  String? @db.Text        // For analytics
 
-  // Security (Phase 2 placeholder)
-  securityStatus SecurityStatus @default(PENDING)
-  securityScore  Float?
-  scannedAt      DateTime?
+  // Scan metadata (URL safety)
+  scanStatus ScanStatus @default(PENDING)
+  scanScore  Float?
+  scannedAt  DateTime?
+  scanDetails Json?
+  lastScanVersion String? @db.VarChar(50)
 
   // Advanced features
   password    String?

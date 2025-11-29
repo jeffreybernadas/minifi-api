@@ -87,6 +87,7 @@
     "nanoid": "^5.0.7",
     "nest-keycloak-connect": "^1.10.1",
     "nestjs-graceful-shutdown": "^1.0.3",
+    "openai": "^4.82.0",
     "pg": "^8.16.3",
     "qrcode": "^1.5.4",
     "react": "19.1.1",

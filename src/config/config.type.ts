@@ -8,6 +8,7 @@ import { KeycloakConfig } from '@/config/keycloak/keycloak-config.type';
 import { RabbitMQConfig } from '@/config/rabbitmq/rabbitmq-config.type';
 import { StripeConfig } from '@/config/stripe/stripe-config.type';
 import { SentryConfig } from '@/config//sentry/sentry-config.type';
+import { OpenAIConfig } from '@/config/openai/openai-config.type';
 
 export type GlobalConfig = {
   app: AppConfig;
@@ -20,4 +21,5 @@ export type GlobalConfig = {
   rabbitmq: RabbitMQConfig;
   stripe: StripeConfig;
   sentry: SentryConfig;
+  openai: OpenAIConfig;
 };
