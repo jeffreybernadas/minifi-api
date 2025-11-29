@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ApiModule } from '@/modules/api.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
@@ -53,9 +53,10 @@ import openaiConfig from '@/config/openai/openai.config';
  *
  * Architecture Note:
  * - This is a separate Node.js process from the worker (WorkerModule)
- * - RabbitMQModule.forRootAsync() automatically registers AmqpConnection globally
+ * - Marked as @Global() to make RabbitMQModule available to all child modules
  * - Any module that needs to publish messages to queues can inject AmqpConnection
  */
+@Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -231,6 +232,6 @@ import openaiConfig from '@/config/openai/openai.config';
     ApmInit,
     ElasticInit,
   ],
-  exports: [CacheService, LoggerService],
+  exports: [CacheService, LoggerService, RabbitMQModule],
 })
 export class AppModule {}

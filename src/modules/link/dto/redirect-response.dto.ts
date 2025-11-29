@@ -50,4 +50,7 @@ export class VerifyPasswordResponseDto {
 
   @ApiProperty({ required: false })
   shortCode?: string;
+
+  @ApiPropertyOptional({ type: RedirectWarningDto })
+  warning?: RedirectWarningDto;
 }
