@@ -1,5 +1,6 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from '@/app.module';
 import helmet from 'helmet';
 import { setupGracefulShutdown } from 'nestjs-graceful-shutdown';
@@ -12,7 +13,10 @@ import { TransformResponseInterceptor } from '@/interceptors/transform-response.
 import { WebSocketRedisAdapter } from '@/shared/websocket/websocket.adapter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    rawBody: true, // needed for Stripe webhook signature verification
+  });
   const configService = app.get(ConfigService<GlobalConfig>);
   const env = configService.getOrThrow('app.nodeEnv', { infer: true });
   const port = configService.getOrThrow('app.port', { infer: true });

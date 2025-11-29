@@ -165,14 +165,8 @@ import openaiConfig from '@/config/openai/openai.config';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         apiKey: config.get('stripe.apiKey')!,
-        webhookConfig: {
-          stripeSecrets: {
-            account: config.get('stripe.account')!,
-            accountTest: config.get('stripe.accountTest')!,
-            connect: config.get('stripe.connect')!,
-            connectTest: config.get('stripe.connectTest')!,
-          },
-        },
+        // Webhook handled manually in SubscriptionController with @Public() decorator
+        // to work with Keycloak AuthGuard
       }),
     }),
     WebSocketModule.forRootAsync({
@@ -232,6 +226,6 @@ import openaiConfig from '@/config/openai/openai.config';
     ApmInit,
     ElasticInit,
   ],
-  exports: [CacheService, LoggerService, RabbitMQModule],
+  exports: [CacheService, LoggerService, RabbitMQModule, StripeModule],
 })
 export class AppModule {}

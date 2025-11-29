@@ -31,6 +31,9 @@ import {
 } from './dto/analytics-response.dto';
 import { AnalyticsFilterDto } from './dto/analytics-filter.dto';
 import { QrCodeResponseDto } from './dto/qr-code-response.dto';
+import { UseGuards } from '@nestjs/common';
+import { SubscriptionTierGuard } from '@/shared/guards/subscription-tier.guard';
+import { UsageLimitGuard } from '@/shared/guards/usage-limit.guard';
 
 @ApiTags('links')
 @ApiBearerAuth('JWT')
@@ -64,6 +67,7 @@ export class LinkController {
     description: 'Forbidden - Custom aliases require PRO tier',
     errorCode: 'FORBIDDEN',
   })
+  @UseGuards(UsageLimitGuard, SubscriptionTierGuard)
   createLink(
     @AuthenticatedUser() user: KeycloakJWT,
     @Body() dto: CreateLinkDto,

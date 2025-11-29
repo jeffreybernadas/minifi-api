@@ -35,6 +35,19 @@ enum UserType {
   FREE
   PRO
 }
+
+enum SubscriptionTier {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  INCOMPLETE
+  TRIALING
+}
 model User {
   id String @id // Keycloak sub (UUID) - NOT auto-generated
 
@@ -54,6 +67,7 @@ model User {
   userType UserType @default(FREE)
   links    Link[]
   tags     Tag[]
+  subscription Subscription?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -265,4 +279,27 @@ model LinkTag {
   @@unique([linkId, tagId])
   @@index([linkId])
   @@index([tagId])
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String             @unique
+  tier      SubscriptionTier   @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+
+  stripeCustomerId       String?  @unique
+  stripeSubscriptionId   String?  @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
+  emailNotifications  Boolean @default(true)
+  securityAlertEmails Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tier, status])
+  @@index([stripeCustomerId])
 }

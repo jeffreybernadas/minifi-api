@@ -24,6 +24,22 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsNotEmpty()
   STRIPE_CONNECT_TEST: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STRIPE_PRICE_ID_PRO: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STRIPE_WEBHOOK_SECRET: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STRIPE_SUCCESS_URL: string;
+
+  @IsString()
+  @IsNotEmpty()
+  STRIPE_CANCEL_URL: string;
 }
 
 export function getConfig(): StripeConfig {
@@ -33,6 +49,10 @@ export function getConfig(): StripeConfig {
     accountTest: process.env.STRIPE_ACCOUNT_TEST!,
     connect: process.env.STRIPE_CONNECT!,
     connectTest: process.env.STRIPE_CONNECT_TEST!,
+    priceIdPro: process.env.STRIPE_PRICE_ID_PRO!,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+    successUrl: process.env.STRIPE_SUCCESS_URL!,
+    cancelUrl: process.env.STRIPE_CANCEL_URL!,
   };
 }
 

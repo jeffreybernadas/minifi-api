@@ -4,4 +4,8 @@ export type StripeConfig = {
   accountTest: string;
   connect: string;
   connectTest: string;
+  priceIdPro: string;
+  webhookSecret: string;
+  successUrl: string;
+  cancelUrl: string;
 };

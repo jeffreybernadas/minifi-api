@@ -79,12 +79,6 @@ export class LinkService {
       throw new NotFoundException('User not found');
     }
 
-    if (dto.customAlias && user.userType !== UserType.PRO) {
-      throw new ForbiddenException(
-        'Custom aliases are available for PRO users only',
-      );
-    }
-
     if (dto.customAlias) {
       this.validateCustomAlias(dto.customAlias);
       await this.ensureAliasAvailability(dto.customAlias);
