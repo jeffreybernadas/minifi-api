@@ -127,12 +127,12 @@ export class RedirectController {
    */
   private async trackClickAsync(linkId: string, req: Request): Promise<void> {
     const ip =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.ip ||
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+      req.ip ??
       req.socket.remoteAddress;
 
     const userAgent = req.headers['user-agent'];
-    const referrer = req.headers.referer || req.headers.referrer;
+    const referrer = req.headers.referer ?? req.headers.referrer;
 
     const utms = {
       utm_source: req.query.utm_source as string | undefined,

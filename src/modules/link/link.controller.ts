@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
@@ -31,7 +32,6 @@ import {
 } from './dto/analytics-response.dto';
 import { AnalyticsFilterDto } from './dto/analytics-filter.dto';
 import { QrCodeResponseDto } from './dto/qr-code-response.dto';
-import { UseGuards } from '@nestjs/common';
 import { SubscriptionTierGuard } from '@/shared/guards/subscription-tier.guard';
 import { UsageLimitGuard } from '@/shared/guards/usage-limit.guard';
 
@@ -102,8 +102,8 @@ export class LinkController {
     @Req() req: Request,
   ): Promise<LinkResponseDto> {
     const ipAddress =
-      (req.headers['x-forwarded-for'] as string) ||
-      req.ip ||
+      (req.headers['x-forwarded-for'] as string) ??
+      req.ip ??
       req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
     return this.linkService.createGuestLink(dto, ipAddress, userAgent);

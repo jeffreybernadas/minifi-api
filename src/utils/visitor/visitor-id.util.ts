@@ -12,7 +12,7 @@ export function generateVisitorId(
   ip: string | undefined,
   userAgent: string | undefined,
 ): string {
-  const combined = `${ip || 'unknown'}|${userAgent || 'unknown'}`;
+  const combined = `${ip ?? 'unknown'}|${userAgent ?? 'unknown'}`;
   return createHash('sha256').update(combined).digest('hex');
 }
 
