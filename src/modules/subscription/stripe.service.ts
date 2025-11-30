@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { GlobalConfig } from '@/config/config.type';
 import { PrismaService } from '@/database/database.service';
 import { SubscriptionService } from './subscription.service';
+import { EmailProducer } from '@/shared/queues/email/email.producer';
+import { EmailRenderer } from '@/utils/email/email.util';
 import {
   SubscriptionStatus,
   SubscriptionTier,
@@ -35,6 +37,7 @@ export class StripeService {
     private readonly configService: ConfigService<GlobalConfig>,
     private readonly prisma: PrismaService,
     private readonly subscriptionService: SubscriptionService,
+    private readonly emailProducer: EmailProducer,
     private readonly logger: LoggerService,
   ) {}
 
@@ -335,7 +338,7 @@ export class StripeService {
 
     const local = await this.prisma.subscription.findFirst({
       where: { stripeCustomerId },
-      select: { userId: true },
+      select: { userId: true, tier: true },
     });
 
     if (!local) {
@@ -347,6 +350,10 @@ export class StripeService {
       return;
     }
 
+    // Check if this is an upgrade to PRO
+    const isUpgrade =
+      local.tier !== SubscriptionTier.PRO && tier === SubscriptionTier.PRO;
+
     this.logger.log(
       `Updating subscription for user ${local.userId}`,
       'StripeService',
@@ -355,6 +362,7 @@ export class StripeService {
         tier,
         status,
         cancelAtPeriodEnd,
+        isUpgrade,
       },
     );
 
@@ -369,6 +377,15 @@ export class StripeService {
       cancelAtPeriodEnd,
       stripeCancelAt,
     });
+
+    // Send upgrade email if user just upgraded to PRO
+    if (isUpgrade) {
+      await this.sendSubscriptionEmail(
+        local.userId,
+        'upgraded',
+        currentPeriodEnd,
+      );
+    }
 
     this.logger.log(
       `Successfully updated subscription for user ${local.userId}`,
@@ -417,6 +434,9 @@ export class StripeService {
       currentPeriodEnd: null,
     });
 
+    // Send cancellation email
+    await this.sendSubscriptionEmail(local.userId, 'cancelled', null);
+
     this.logger.log(
       `Subscription cancelled for user ${local.userId}`,
       'StripeService',
@@ -452,6 +472,72 @@ export class StripeService {
       case 'canceled':
       default:
         return SubscriptionStatus.CANCELLED;
+    }
+  }
+
+  /**
+   * Send subscription-related email notification.
+   */
+  private async sendSubscriptionEmail(
+    userId: string,
+    action: 'upgraded' | 'cancelled' | 'renewing',
+    periodEnd: Date | null,
+  ): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          email: true,
+          firstName: true,
+          emailNotificationsEnabled: true,
+        },
+      });
+
+      if (!user || !user.emailNotificationsEnabled) {
+        return;
+      }
+
+      const dashboardUrl = this.configService.getOrThrow('app.url', {
+        infer: true,
+      });
+      const defaultSender = this.configService.getOrThrow('resend.sender', {
+        infer: true,
+      });
+
+      const tier = action === 'cancelled' ? 'FREE' : 'PRO';
+
+      const html = await EmailRenderer.renderSubscription({
+        firstName: user.firstName ?? undefined,
+        action,
+        tier,
+        periodEnd: periodEnd ?? undefined,
+        dashboardUrl: `${dashboardUrl}/dashboard`,
+      });
+
+      const subjectMap = {
+        upgraded: '🎉 Welcome to Minifi PRO!',
+        cancelled: 'Your Minifi subscription has been cancelled',
+        renewing: 'Your Minifi PRO subscription is renewing soon',
+      };
+
+      await this.emailProducer.publishSendEmail({
+        userId,
+        to: user.email,
+        subject: subjectMap[action],
+        html,
+        from: defaultSender,
+      });
+
+      this.logger.log(
+        `Subscription ${action} email sent to user: ${userId}`,
+        'StripeService',
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send subscription email to user: ${userId}`,
+        'StripeService',
+        { error: error instanceof Error ? error.message : 'Unknown error' },
+      );
     }
   }
 }

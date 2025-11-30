@@ -41,3 +41,34 @@ export interface LinkExpiringEmailProps {
   totalCount: number;
   dashboardUrl: string;
 }
+
+export interface WelcomeEmailProps {
+  firstName?: string;
+  dashboardUrl: string;
+}
+
+export interface TopLinkData {
+  shortCode: string;
+  title?: string;
+  clicks: number;
+  uniqueClicks: number;
+}
+
+export interface MonthlyReportEmailProps {
+  firstName?: string;
+  month: string;
+  year: number;
+  totalClicks: number;
+  uniqueVisitors: number;
+  totalLinks: number;
+  topLinks: TopLinkData[];
+  dashboardUrl: string;
+}
+
+export interface SubscriptionEmailProps {
+  firstName?: string;
+  action: 'upgraded' | 'cancelled' | 'renewing';
+  tier: 'FREE' | 'PRO';
+  periodEnd?: Date | string;
+  dashboardUrl: string;
+}

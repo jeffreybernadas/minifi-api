@@ -3,11 +3,17 @@ import { TestEmailTemplate } from '@/shared/mail/templates/test-email';
 import { ChatUnreadDigestTemplate } from '@/shared/mail/templates/chat-unread-digest';
 import { SecurityAlertEmailTemplate } from '@/shared/mail/templates/security-alert-email';
 import { LinkExpiringEmailTemplate } from '@/shared/mail/templates/link-expiring-email';
+import { WelcomeEmailTemplate } from '@/shared/mail/templates/welcome-email';
+import { MonthlyReportEmailTemplate } from '@/shared/mail/templates/monthly-report-email';
+import { SubscriptionEmailTemplate } from '@/shared/mail/templates/subscription-email';
 import {
   TestEmailTemplateProps,
   ChatUnreadDigestProps,
   SecurityAlertEmailProps,
   LinkExpiringEmailProps,
+  WelcomeEmailProps,
+  MonthlyReportEmailProps,
+  SubscriptionEmailProps,
 } from '@/common/interfaces/email.interface';
 
 /**
@@ -47,6 +53,31 @@ export class EmailRenderer {
     data: LinkExpiringEmailProps,
   ): Promise<string> {
     return await render(LinkExpiringEmailTemplate(data));
+  }
+
+  /**
+   * Renders the Welcome template
+   */
+  static async renderWelcome(data: WelcomeEmailProps): Promise<string> {
+    return await render(WelcomeEmailTemplate(data));
+  }
+
+  /**
+   * Renders the MonthlyReport template
+   */
+  static async renderMonthlyReport(
+    data: MonthlyReportEmailProps,
+  ): Promise<string> {
+    return await render(MonthlyReportEmailTemplate(data));
+  }
+
+  /**
+   * Renders the Subscription template
+   */
+  static async renderSubscription(
+    data: SubscriptionEmailProps,
+  ): Promise<string> {
+    return await render(SubscriptionEmailTemplate(data));
   }
 
   /**
