@@ -3,6 +3,7 @@ import { PrismaService } from '@/database/database.service';
 import { LoggerService } from '@/shared/logger/logger.service';
 import { User } from '@/generated/prisma/client';
 import { KeycloakJWT } from './interfaces/keycloak-jwt.interface';
+import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
 
 /**
  * Service for managing user profiles with sync-on-demand pattern
@@ -71,5 +72,32 @@ export class UserService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Update user preferences (app-specific fields only)
+   * Keycloak fields (email, name, etc.) cannot be updated here
+   *
+   * @param userId - Keycloak sub (user ID)
+   * @param dto - Fields to update
+   * @returns Updated user record
+   */
+  async updatePreferences(
+    userId: string,
+    dto: UpdateUserPreferencesDto,
+  ): Promise<User> {
+    this.logger.log(`Updating preferences for user: ${userId}`, 'UserService');
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.emailNotificationsEnabled !== undefined && {
+          emailNotificationsEnabled: dto.emailNotificationsEnabled,
+        }),
+        ...(dto.phoneNumber !== undefined && { phoneNumber: dto.phoneNumber }),
+        ...(dto.avatarUrl !== undefined && { avatarUrl: dto.avatarUrl }),
+        ...(dto.address !== undefined && { address: dto.address }),
+      },
+    });
   }
 }

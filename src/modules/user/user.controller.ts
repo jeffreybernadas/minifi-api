@@ -1,10 +1,11 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
   ApiStandardResponse,
   ApiStandardErrorResponse,
 } from '@/decorators/swagger.decorator';
 import { UserProfileDto } from './dto/user-profile.dto';
+import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
 import { KeycloakJWT } from './interfaces/keycloak-jwt.interface';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { UserService } from './user.service';
@@ -72,6 +73,43 @@ export class UserController {
       address: localUser.address,
       createdAt: localUser.createdAt,
       updatedAt: localUser.updatedAt,
+    };
+  }
+
+  @Patch('/preferences')
+  @ApiOperation({
+    summary: 'Update user preferences',
+    description:
+      'Updates app-specific user preferences such as email notification settings, phone number, avatar, and address. Keycloak-managed fields (email, name) cannot be updated here.',
+  })
+  @ApiStandardResponse({
+    description: 'Preferences updated successfully',
+    type: UpdateUserPreferencesDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'User not found',
+    errorCode: 'USER_NOT_FOUND',
+  })
+  async updatePreferences(
+    @AuthenticatedUser() keycloakUser: KeycloakJWT,
+    @Body() dto: UpdateUserPreferencesDto,
+  ): Promise<UpdateUserPreferencesDto> {
+    const updated = await this.userService.updatePreferences(
+      keycloakUser.sub,
+      dto,
+    );
+
+    return {
+      emailNotificationsEnabled: updated.emailNotificationsEnabled,
+      phoneNumber: updated.phoneNumber ?? undefined,
+      avatarUrl: updated.avatarUrl ?? undefined,
+      address: updated.address ?? undefined,
     };
   }
 }

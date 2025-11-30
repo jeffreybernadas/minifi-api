@@ -57,6 +57,7 @@ model User {
   firstName     String? // given_name from Keycloak
   lastName      String? // family_name from Keycloak
   emailVerified Boolean @default(false)
+  emailNotificationsEnabled Boolean @default(true)
 
   // Additional profile fields (managed by application)
   phoneNumber String?
