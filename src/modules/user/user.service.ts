@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/database/database.service';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { EmailProducer } from '@/shared/queues/email/email.producer';
+import { EmailRenderer } from '@/utils/email/email.util';
 import { User } from '@/generated/prisma/client';
 import { KeycloakJWT } from './interfaces/keycloak-jwt.interface';
 import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
+import { GlobalConfig } from '@/config/config.type';
 
 /**
  * Service for managing user profiles with sync-on-demand pattern
@@ -15,6 +19,8 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
+    private readonly emailProducer: EmailProducer,
+    private readonly configService: ConfigService<GlobalConfig>,
   ) {}
 
   /**
@@ -63,6 +69,10 @@ export class UserService {
           address: null,
         },
       });
+
+      // Send welcome email to new user
+      await this.sendWelcomeEmail(user);
+
       return user;
     } catch (error) {
       this.logger.error(
@@ -99,5 +109,41 @@ export class UserService {
         ...(dto.address !== undefined && { address: dto.address }),
       },
     });
+  }
+
+  /**
+   * Send welcome email to newly created user
+   */
+  private async sendWelcomeEmail(user: User): Promise<void> {
+    try {
+      const dashboardUrl = this.configService.getOrThrow('app.url', {
+        infer: true,
+      });
+      const defaultSender = this.configService.getOrThrow('resend.sender', {
+        infer: true,
+      });
+
+      const html = await EmailRenderer.renderWelcome({
+        firstName: user.firstName ?? undefined,
+        dashboardUrl: `${dashboardUrl}/dashboard`,
+      });
+
+      await this.emailProducer.publishSendEmail({
+        userId: user.id,
+        to: user.email,
+        subject: 'Welcome to Minifi! 🎉',
+        html,
+        from: defaultSender,
+      });
+
+      this.logger.log(`Welcome email sent to user: ${user.id}`, 'UserService');
+    } catch (error) {
+      // Don't fail user creation if email fails
+      this.logger.error(
+        `Failed to send welcome email to user: ${user.id}`,
+        'UserService',
+        { error: error instanceof Error ? error.message : 'Unknown error' },
+      );
+    }
   }
 }
