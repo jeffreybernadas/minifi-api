@@ -11,6 +11,9 @@ import elasticsearchConfig from '@/config/elasticsearch/elasticsearch.config';
 import rabbitmqConfig from '@/config/rabbitmq/rabbitmq.config';
 import resendConfig from '@/config/resend/resend.config';
 import openaiConfig from '@/config/openai/openai.config';
+import stripeConfig from '@/config/stripe/stripe.config';
+import minioConfig from '@/config/minio/minio.config';
+import { NestMinioModule } from '@/shared/storage/minio.module';
 
 // Shared modules
 import { DatabaseModule } from '@/database/database.module';
@@ -21,6 +24,7 @@ import { ResendModule } from '@/shared/mail/resend.module';
 import { EmailQueueModule } from '@/shared/queues/email/email.module';
 import { ChatQueueModule } from '@/shared/queues/chat/chat.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { StripeModule } from '@golevelup/nestjs-stripe';
 import { QUEUE_EXCHANGES } from '@/shared/queues/constants/queue.constant';
 import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
 import { LinkExpiringNotificationCron } from '@/shared/queues/link/link-expiring-notification.cron';
@@ -58,6 +62,8 @@ import { LinkModule } from '@/modules/link/link.module';
         rabbitmqConfig,
         resendConfig,
         openaiConfig,
+        stripeConfig,
+        minioConfig,
       ],
     }),
 
@@ -113,6 +119,28 @@ import { LinkModule } from '@/modules/link/link.module';
       }),
     }),
 
+    // Stripe (required by SubscriptionModule via LinkModule)
+    StripeModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        apiKey: config.get('stripe.apiKey')!,
+      }),
+    }),
+
+    // MinIO (required by LinkService for QR code storage)
+    NestMinioModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        endPoint: config.get('minio.url') as string,
+        port: 443,
+        useSSL: true,
+        accessKey: config.get('minio.accessKey') as string,
+        secretKey: config.get('minio.secretKey') as string,
+      }),
+    }),
+
     // Shared modules
     DatabaseModule,
     LoggerModule,
@@ -132,6 +160,6 @@ import { LinkModule } from '@/modules/link/link.module';
     ScanConsumer,
     UrlScanService,
   ],
-  exports: [RabbitMQModule],
+  exports: [RabbitMQModule, StripeModule],
 })
 export class WorkerModule {}

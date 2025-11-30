@@ -18,7 +18,7 @@ import * as React from 'react';
  * Sent when a user upgrades, cancels, or has a subscription renewing
  */
 export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
-  const { firstName, action, tier, periodEnd, dashboardUrl } = props;
+  const { firstName, action, periodEnd, dashboardUrl } = props;
 
   const getContent = () => {
     switch (action) {

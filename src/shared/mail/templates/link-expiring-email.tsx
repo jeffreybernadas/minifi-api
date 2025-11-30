@@ -24,7 +24,7 @@ export const LinkExpiringEmailTemplate = (props: LinkExpiringEmailProps) => {
     <Html>
       <Head />
       <Preview>
-        ⏰ {totalCount} link{totalCount > 1 ? 's' : ''} expiring soon
+        ⏰ {totalCount.toString()} link{totalCount > 1 ? 's' : ''} expiring soon
       </Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
