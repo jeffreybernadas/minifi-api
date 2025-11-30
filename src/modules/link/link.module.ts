@@ -5,9 +5,10 @@ import { LinkService } from './link.service';
 import { TagController } from './tag.controller';
 import { TagService } from './tag.service';
 import { ScanQueueModule } from '@/shared/queues/scan/scan.module';
+import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
-  imports: [ScanQueueModule],
+  imports: [ScanQueueModule, SubscriptionModule],
   controllers: [LinkController, RedirectController, TagController],
   providers: [LinkService, TagService],
   exports: [LinkService, TagService],
