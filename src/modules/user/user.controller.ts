@@ -68,6 +68,7 @@ export class UserController {
       picture: keycloakUser.picture,
 
       // Application-specific fields (from local database)
+      emailNotificationsEnabled: localUser.emailNotificationsEnabled,
       phoneNumber: localUser.phoneNumber,
       avatarUrl: localUser.avatarUrl,
       address: localUser.address,

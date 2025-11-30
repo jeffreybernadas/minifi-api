@@ -169,6 +169,13 @@ export class UserProfileDto {
   phoneNumber?: string | null;
 
   @ApiProperty({
+    description: 'Whether to receive email notifications',
+    example: true,
+    required: false,
+  })
+  emailNotificationsEnabled?: boolean;
+
+  @ApiProperty({
     description: 'Avatar URL',
     example: 'https://example.com/avatar.jpg',
     required: false,
