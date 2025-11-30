@@ -287,10 +287,12 @@ model Subscription {
   tier      SubscriptionTier   @default(FREE)
   status    SubscriptionStatus @default(ACTIVE)
 
-  stripeCustomerId       String?  @unique
-  stripeSubscriptionId   String?  @unique
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
+  cancelAtPeriodEnd      Boolean   @default(false) // True if user cancelled but period hasn't ended
+  stripeCancelAt         DateTime? // When the subscription will actually end (if cancelled)
 
   emailNotifications  Boolean @default(true)
   securityAlertEmails Boolean @default(true)

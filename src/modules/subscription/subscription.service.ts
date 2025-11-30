@@ -75,6 +75,8 @@ export class SubscriptionService {
     stripeSubscriptionId?: string | null;
     stripePriceId?: string | null;
     currentPeriodEnd?: Date | null;
+    cancelAtPeriodEnd?: boolean;
+    stripeCancelAt?: Date | null;
   }) {
     const {
       userId,
@@ -84,6 +86,8 @@ export class SubscriptionService {
       stripeSubscriptionId,
       stripePriceId,
       currentPeriodEnd,
+      cancelAtPeriodEnd,
+      stripeCancelAt,
     } = params;
 
     await this.prisma.subscription.upsert({
@@ -95,6 +99,8 @@ export class SubscriptionService {
         stripeSubscriptionId,
         stripePriceId,
         stripeCurrentPeriodEnd: currentPeriodEnd,
+        cancelAtPeriodEnd: cancelAtPeriodEnd ?? false,
+        stripeCancelAt,
       },
       create: {
         userId,
@@ -104,33 +110,12 @@ export class SubscriptionService {
         stripeSubscriptionId,
         stripePriceId,
         stripeCurrentPeriodEnd: currentPeriodEnd,
+        cancelAtPeriodEnd: cancelAtPeriodEnd ?? false,
+        stripeCancelAt,
       },
     });
 
     await this.syncUserType(userId, tier);
-  }
-
-  /**
-   * Cancel subscription locally (immediate effect).
-   *
-   * Called by StripeService.cancelSubscription() after setting
-   * cancel_at_period_end=true in Stripe.
-   *
-   * Note: This immediately reverts the user to FREE tier locally,
-   * even though Stripe subscription remains active until period end.
-   * For more accurate handling, you could wait for the webhook instead.
-   *
-   * @param userId - User ID to cancel subscription for
-   */
-  async cancelLocal(userId: string) {
-    await this.prisma.subscription.update({
-      where: { userId },
-      data: {
-        status: SubscriptionStatus.CANCELLED,
-        tier: SubscriptionTier.FREE,
-      },
-    });
-    await this.syncUserType(userId, SubscriptionTier.FREE);
   }
 
   /**

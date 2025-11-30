@@ -18,6 +18,13 @@ import {
 } from '@/decorators/swagger.decorator';
 import { Request } from 'express';
 import { LoggerService } from '@/shared/logger/logger.service';
+import {
+  SubscriptionResponseDto,
+  CheckoutSessionResponseDto,
+  PortalSessionResponseDto,
+  CancelSubscriptionResponseDto,
+  WebhookReceivedResponseDto,
+} from './dto/subscription-response.dto';
 
 @ApiTags('subscriptions')
 @ApiBearerAuth('JWT')
@@ -30,35 +37,69 @@ export class SubscriptionController {
   ) {}
 
   @Get('me')
-  @ApiOperation({ summary: 'Get current subscription' })
-  @ApiStandardResponse({ status: 200, description: 'Subscription retrieved' })
+  @ApiOperation({
+    summary: 'Get current subscription',
+    description:
+      'Returns the current user subscription. Creates a FREE subscription if none exists.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Subscription retrieved',
+    type: SubscriptionResponseDto,
+  })
   getMe(@AuthenticatedUser() user: KeycloakJWT) {
     return this.subscriptionService.getOrCreateSubscription(user.sub);
   }
 
   @Post('checkout')
-  @ApiOperation({ summary: 'Create Stripe Checkout session for PRO upgrade' })
-  @ApiStandardResponse({ status: 200, description: 'Checkout session created' })
+  @ApiOperation({
+    summary: 'Create Stripe Checkout session for PRO upgrade',
+    description:
+      'Creates a Stripe Checkout session. Redirect the user to the returned URL to complete payment.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Checkout session created',
+    type: CheckoutSessionResponseDto,
+  })
   createCheckout(@AuthenticatedUser() user: KeycloakJWT) {
     return this.stripeService.createCheckoutSession(user.sub);
   }
 
   @Post('portal')
-  @ApiOperation({ summary: 'Create Stripe Billing Portal session' })
-  @ApiStandardResponse({ status: 200, description: 'Portal session created' })
+  @ApiOperation({
+    summary: 'Create Stripe Billing Portal session',
+    description:
+      'Creates a Stripe Billing Portal session where users can manage their subscription, update payment methods, and view invoices.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Portal session created',
+    type: PortalSessionResponseDto,
+  })
+  @ApiStandardErrorResponse({
+    status: 400,
+    description: 'User has not subscribed yet (no Stripe customer)',
+    errorCode: 'BAD_REQUEST',
+  })
   createPortal(@AuthenticatedUser() user: KeycloakJWT) {
     return this.stripeService.createPortalSession(user.sub);
   }
 
   @Post('cancel')
-  @ApiOperation({ summary: 'Cancel subscription at period end' })
+  @ApiOperation({
+    summary: 'Cancel subscription at period end',
+    description:
+      'Schedules subscription cancellation at the end of the current billing period. User keeps PRO access until then.',
+  })
   @ApiStandardResponse({
     status: 200,
-    description: 'Subscription cancellation queued',
+    description: 'Subscription cancellation scheduled',
+    type: CancelSubscriptionResponseDto,
   })
   @ApiStandardErrorResponse({
     status: 400,
-    description: 'Stripe subscription not found',
+    description: 'User has no active Stripe subscription',
     errorCode: 'BAD_REQUEST',
   })
   cancel(@AuthenticatedUser() user: KeycloakJWT) {
@@ -67,7 +108,16 @@ export class SubscriptionController {
 
   @Public()
   @Post('webhook')
-  @ApiOperation({ summary: 'Stripe webhook endpoint' })
+  @ApiOperation({
+    summary: 'Stripe webhook endpoint',
+    description:
+      'Receives webhook events from Stripe. Do not call directly - this is called by Stripe servers.',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Webhook processed',
+    type: WebhookReceivedResponseDto,
+  })
   async webhook(
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature: string,

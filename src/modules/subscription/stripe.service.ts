@@ -138,13 +138,15 @@ export class StripeService {
    * Sets cancel_at_period_end=true in Stripe, meaning:
    * - User keeps PRO access until current billing period ends
    * - No more charges after that
-   * - Stripe will fire customer.subscription.deleted when period ends
+   * - Stripe fires customer.subscription.updated immediately (we update cancelAtPeriodEnd)
+   * - Stripe fires customer.subscription.deleted when period actually ends (we downgrade to FREE)
    *
-   * Also immediately updates local DB to CANCELLED status.
+   * Does NOT immediately downgrade the user - they keep PRO until period ends.
    *
    * Called by: POST /subscriptions/cancel
    *
    * @param userId - Keycloak user ID
+   * @returns Cancellation info with period end date
    * @throws BadRequestException if user has no stripeSubscriptionId
    */
   async cancelSubscription(userId: string) {
@@ -155,11 +157,22 @@ export class StripeService {
       throw new BadRequestException('Stripe subscription not found for user');
     }
 
-    await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
-      cancel_at_period_end: true,
-    });
+    // Set cancel_at_period_end in Stripe - this triggers customer.subscription.updated webhook
+    const updated = await this.stripe.subscriptions.update(
+      subscription.stripeSubscriptionId,
+      { cancel_at_period_end: true },
+    );
 
-    await this.subscriptionService.cancelLocal(userId);
+    // Return cancellation info for immediate UI feedback
+    // The webhook will update local DB with cancelAtPeriodEnd=true
+    // Note: current_period_end comes from subscription items in this Stripe SDK version
+    const firstItem = updated.items?.data?.[0];
+    const periodEnd = firstItem?.current_period_end;
+    return {
+      cancelAtPeriodEnd: updated.cancel_at_period_end,
+      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
+      status: updated.status,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -294,6 +307,12 @@ export class StripeService {
       ? new Date(currentPeriodEndSeconds * 1000)
       : null;
 
+    // Extract cancellation info
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    const stripeCancelAt = subscription.cancel_at
+      ? new Date(subscription.cancel_at * 1000)
+      : null;
+
     const tier =
       stripePriceId ===
       this.configService.getOrThrow('stripe.priceIdPro', { infer: true })
@@ -310,6 +329,7 @@ export class StripeService {
         stripeSubscriptionId,
         tier,
         status,
+        cancelAtPeriodEnd,
       },
     );
 
@@ -334,6 +354,7 @@ export class StripeService {
         userId: local.userId,
         tier,
         status,
+        cancelAtPeriodEnd,
       },
     );
 
@@ -345,6 +366,8 @@ export class StripeService {
       stripeSubscriptionId,
       stripePriceId,
       currentPeriodEnd,
+      cancelAtPeriodEnd,
+      stripeCancelAt,
     });
 
     this.logger.log(
