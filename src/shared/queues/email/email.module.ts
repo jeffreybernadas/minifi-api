@@ -2,18 +2,23 @@ import { Module } from '@nestjs/common';
 import { EmailQueueService } from './email.service';
 import { EmailProducer } from './email.producer';
 import { EmailConsumer } from './email.consumer';
+import { DatabaseModule } from '@/database/database.module';
 
 /**
  * Email Queue Module
- * Provides email queue functionality for both main backend and worker
- * - Producer: Used by main backend to publish email jobs
- * - Consumer: Used by worker to process email jobs
- * - Service: Business logic for sending emails
+ * Handles async email sending via RabbitMQ.
  *
- * Note: Requires RabbitMQModule to be configured globally in the root module
- * (WorkerModule or AppModule) to provide AmqpConnection
+ * Features:
+ * - Async email delivery via queue
+ * - User opt-out check (if userId provided)
+ * - Retry on failure
+ *
+ * Usage:
+ * 1. Render template using EmailRenderer utility
+ * 2. Publish via EmailProducer.publishSendEmail()
  */
 @Module({
+  imports: [DatabaseModule],
   providers: [EmailQueueService, EmailProducer, EmailConsumer],
   exports: [EmailQueueService, EmailProducer],
 })

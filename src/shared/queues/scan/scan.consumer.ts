@@ -13,6 +13,8 @@ import {
 import { UrlScanService } from '@/shared/scan/url-scan.service';
 import { UrlScanStatus } from '@/common/interfaces/scan.interface';
 import { ScanStatus } from '@/generated/prisma/client';
+import { EmailProducer } from '@/shared/queues/email/email.producer';
+import { EmailRenderer } from '@/utils/email/email.util';
 
 @Injectable()
 export class ScanConsumer {
@@ -23,6 +25,7 @@ export class ScanConsumer {
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly configService: ConfigService,
+    private readonly emailProducer: EmailProducer,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
@@ -37,6 +40,11 @@ export class ScanConsumer {
     try {
       const link = await this.prisma.link.findUnique({
         where: { id: job.linkId },
+        include: {
+          user: {
+            select: { id: true, email: true },
+          },
+        },
       });
 
       if (!link) {
@@ -87,6 +95,32 @@ export class ScanConsumer {
         status: result.status,
         requestedBy: job.requestedBy,
       });
+
+      // Send security alert email for non-safe statuses
+      if (link.userId && result.status !== 'SAFE' && link.user?.email) {
+        const defaultSender = this.configService.get('resend.sender', {
+          infer: true,
+        });
+
+        const html = await EmailRenderer.renderSecurityAlert({
+          originalUrl: link.originalUrl,
+          shortCode: link.shortCode,
+          status: result.status,
+          score: result.score,
+          threats: result.threats,
+          reasoning: result.reasoning,
+          recommendations: result.recommendations,
+          scannedAt: new Date(),
+        });
+
+        await this.emailProducer.publishSendEmail({
+          userId: link.userId,
+          to: link.user.email,
+          subject: `Security warning for your link ${link.shortCode}`,
+          html,
+          from: defaultSender,
+        });
+      }
     } catch (error) {
       this.logger.error(
         'URL scan failed',

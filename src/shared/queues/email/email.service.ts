@@ -2,14 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ResendService } from '@/shared/mail/resend.service';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { PrismaService } from '@/database/database.service';
 import { SendEmailJobDto } from './dto/email-job.dto';
 import { GlobalConfig } from '@/config/config.type';
-import { PrismaService } from '@/database/database.service';
 
 /**
  * Email Queue Service
- * Handles business logic for sending emails
- * Used by the email consumer to process email jobs from the queue
+ * Handles email sending with user opt-out checks.
  */
 @Injectable()
 export class EmailQueueService {
@@ -22,39 +21,48 @@ export class EmailQueueService {
 
   /**
    * Send an email using Resend service
+   *
+   * If userId is provided:
+   * - Checks user's emailNotificationsEnabled preference
+   * - Uses canonical email from database
+   * - Skips send if user opted out
+   *
    * @param emailJob - Email job data from queue
-   * @returns void
    */
   async sendEmail(emailJob: SendEmailJobDto): Promise<void> {
     const defaultSender = this.configService.get('resend.sender', {
       infer: true,
     });
 
-    // Resolve user preference (if userId provided)
+    // Check user opt-out preference if userId provided
     if (emailJob.userId) {
       const user = await this.prisma.user.findUnique({
         where: { id: emailJob.userId },
+        select: { email: true, emailNotificationsEnabled: true },
       });
 
       if (!user) {
         this.logger.warn(
-          'User not found, skipping email send',
+          'User not found, skipping email',
           'EmailQueueService',
-          { userId: emailJob.userId, subject: emailJob.subject },
+          {
+            userId: emailJob.userId,
+            subject: emailJob.subject,
+          },
         );
         return;
       }
 
       if (!user.emailNotificationsEnabled) {
         this.logger.log(
-          'User opted out of email notifications, skipping send',
+          'User opted out of emails, skipping',
           'EmailQueueService',
           { userId: emailJob.userId, subject: emailJob.subject },
         );
         return;
       }
 
-      // Prefer canonical email from DB
+      // Use canonical email from database
       emailJob.to = user.email;
     }
 

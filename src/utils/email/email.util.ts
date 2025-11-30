@@ -1,16 +1,20 @@
 import { render } from '@react-email/components';
 import { TestEmailTemplate } from '@/shared/mail/templates/test-email';
 import { ChatUnreadDigestTemplate } from '@/shared/mail/templates/chat-unread-digest';
+import { SecurityAlertEmailTemplate } from '@/shared/mail/templates/security-alert-email';
 import {
   TestEmailTemplateProps,
   ChatUnreadDigestProps,
+  SecurityAlertEmailProps,
 } from '@/common/interfaces/email.interface';
 
+/**
+ * Email Renderer Utility
+ * Renders React Email templates to HTML strings
+ */
 export class EmailRenderer {
   /**
    * Renders the TestEmail template
-   * @param data - Optional data to pass to the template
-   * @returns Rendered HTML string
    */
   static async renderTestEmail(data?: TestEmailTemplateProps): Promise<string> {
     return await render(TestEmailTemplate(data));
@@ -18,8 +22,6 @@ export class EmailRenderer {
 
   /**
    * Renders the ChatUnreadDigest template
-   * @param data - Data to pass to the template
-   * @returns Rendered HTML string
    */
   static async renderChatUnreadDigest(
     data: ChatUnreadDigestProps,
@@ -28,10 +30,16 @@ export class EmailRenderer {
   }
 
   /**
-   * Generic method to render any email template
-   * @param templateName - Name of the template to render
-   * @param data - Data to pass to the template
-   * @returns Rendered HTML string
+   * Renders the SecurityAlert template
+   */
+  static async renderSecurityAlert(
+    data: SecurityAlertEmailProps,
+  ): Promise<string> {
+    return await render(SecurityAlertEmailTemplate(data));
+  }
+
+  /**
+   * Generic method to render any email template by name
    */
   static async renderTemplate<T>(
     templateName: string,
@@ -42,6 +50,8 @@ export class EmailRenderer {
         return await this.renderTestEmail(data as TestEmailTemplateProps);
       case 'chat-unread-digest':
         return await this.renderChatUnreadDigest(data as ChatUnreadDigestProps);
+      case 'security-alert':
+        return await this.renderSecurityAlert(data as SecurityAlertEmailProps);
       default:
         throw new Error(`Unknown email template: ${templateName}`);
     }

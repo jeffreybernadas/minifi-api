@@ -173,6 +173,7 @@ export class ChatQueueService {
 
       // Publish email job to queue
       await this.emailProducer.publishSendEmail({
+        userId,
         to: userEmail,
         subject: `You have ${totalUnreadCount} unread message${totalUnreadCount > 1 ? 's' : ''}`,
         html,

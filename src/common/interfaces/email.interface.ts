@@ -16,3 +16,14 @@ export interface ChatUnreadDigestProps {
   unreadChats: UnreadChatData[];
   totalUnreadCount: number;
 }
+
+export interface SecurityAlertEmailProps {
+  originalUrl: string;
+  shortCode: string;
+  status: string;
+  score?: number;
+  threats: string[];
+  reasoning?: string;
+  recommendations?: string;
+  scannedAt?: Date | string;
+}
