@@ -27,3 +27,17 @@ export interface SecurityAlertEmailProps {
   recommendations?: string;
   scannedAt?: Date | string;
 }
+
+export interface ExpiringLinkData {
+  shortCode: string;
+  title?: string;
+  originalUrl: string;
+  expiresAt: Date | string;
+  daysRemaining: number;
+}
+
+export interface LinkExpiringEmailProps {
+  expiringLinks: ExpiringLinkData[];
+  totalCount: number;
+  dashboardUrl: string;
+}

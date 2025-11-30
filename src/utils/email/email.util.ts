@@ -2,10 +2,12 @@ import { render } from '@react-email/components';
 import { TestEmailTemplate } from '@/shared/mail/templates/test-email';
 import { ChatUnreadDigestTemplate } from '@/shared/mail/templates/chat-unread-digest';
 import { SecurityAlertEmailTemplate } from '@/shared/mail/templates/security-alert-email';
+import { LinkExpiringEmailTemplate } from '@/shared/mail/templates/link-expiring-email';
 import {
   TestEmailTemplateProps,
   ChatUnreadDigestProps,
   SecurityAlertEmailProps,
+  LinkExpiringEmailProps,
 } from '@/common/interfaces/email.interface';
 
 /**
@@ -36,6 +38,15 @@ export class EmailRenderer {
     data: SecurityAlertEmailProps,
   ): Promise<string> {
     return await render(SecurityAlertEmailTemplate(data));
+  }
+
+  /**
+   * Renders the LinkExpiring template
+   */
+  static async renderLinkExpiring(
+    data: LinkExpiringEmailProps,
+  ): Promise<string> {
+    return await render(LinkExpiringEmailTemplate(data));
   }
 
   /**

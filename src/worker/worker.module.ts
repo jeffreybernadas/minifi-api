@@ -23,6 +23,7 @@ import { ChatQueueModule } from '@/shared/queues/chat/chat.module';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { QUEUE_EXCHANGES } from '@/shared/queues/constants/queue.constant';
 import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
+import { LinkExpiringNotificationCron } from '@/shared/queues/link/link-expiring-notification.cron';
 import { ScanQueueModule } from '@/shared/queues/scan/scan.module';
 import { ScanConsumer } from '@/shared/queues/scan/scan.consumer';
 import { UrlScanService } from '@/shared/scan/url-scan.service';
@@ -119,7 +120,12 @@ import { UrlScanService } from '@/shared/scan/url-scan.service';
     ChatQueueModule,
     ScanQueueModule,
   ],
-  providers: [LinkSchedulerCron, ScanConsumer, UrlScanService],
+  providers: [
+    LinkSchedulerCron,
+    LinkExpiringNotificationCron,
+    ScanConsumer,
+    UrlScanService,
+  ],
   exports: [RabbitMQModule],
 })
 export class WorkerModule {}
