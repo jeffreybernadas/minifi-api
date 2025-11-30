@@ -13,6 +13,7 @@ export default tseslint.config(
       'lint-staged.config.mjs',
       'setup-jest.mjs',
       'jest.config.js',
+      'ecosystem.config.js',
       'src/generated/*',
       '.husky/*',
     ],
