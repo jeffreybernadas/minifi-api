@@ -54,15 +54,57 @@ export interface TopLinkData {
   uniqueClicks: number;
 }
 
+export interface TopCountryData {
+  country: string;
+  clicks: number;
+}
+
+export interface TopDeviceData {
+  device: string;
+  clicks: number;
+  percentage: number;
+}
+
+export interface TopReferrerData {
+  referrer: string;
+  clicks: number;
+}
+
 export interface MonthlyReportEmailProps {
   firstName?: string;
   month: string;
   year: number;
+  // Summary stats
   totalClicks: number;
   uniqueVisitors: number;
-  totalLinks: number;
+  totalActiveLinks: number;
+  linksCreatedThisMonth: number;
+  // Growth
+  growthPercentage?: number; // vs previous month, undefined if first month
+  // Top performers
   topLinks: TopLinkData[];
+  topCountries: TopCountryData[];
+  topDevices: TopDeviceData[];
+  topReferrers: TopReferrerData[];
+  // Best day
+  bestDay?: { date: string; clicks: number };
   dashboardUrl: string;
+}
+
+/**
+ * User monthly analytics result from LinkService
+ */
+export interface UserMonthlyAnalytics {
+  totalClicks: number;
+  uniqueVisitors: number;
+  totalActiveLinks: number;
+  linksCreatedThisMonth: number;
+  previousMonthClicks: number;
+  topLinks: TopLinkData[];
+  topCountries: TopCountryData[];
+  topDevices: TopDeviceData[];
+  topReferrers: TopReferrerData[];
+  bestDay?: { date: string; clicks: number };
 }
 
 export interface SubscriptionEmailProps {

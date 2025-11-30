@@ -24,9 +24,11 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { QUEUE_EXCHANGES } from '@/shared/queues/constants/queue.constant';
 import { LinkSchedulerCron } from '@/shared/queues/link/link-scheduler.cron';
 import { LinkExpiringNotificationCron } from '@/shared/queues/link/link-expiring-notification.cron';
+import { MonthlyReportCron } from '@/shared/queues/link/monthly-report.cron';
 import { ScanQueueModule } from '@/shared/queues/scan/scan.module';
 import { ScanConsumer } from '@/shared/queues/scan/scan.consumer';
 import { UrlScanService } from '@/shared/scan/url-scan.service';
+import { LinkModule } from '@/modules/link/link.module';
 
 /**
  * Worker Module
@@ -119,10 +121,14 @@ import { UrlScanService } from '@/shared/scan/url-scan.service';
     EmailQueueModule,
     ChatQueueModule,
     ScanQueueModule,
+
+    // Feature modules (for service access in crons)
+    LinkModule,
   ],
   providers: [
     LinkSchedulerCron,
     LinkExpiringNotificationCron,
+    MonthlyReportCron,
     ScanConsumer,
     UrlScanService,
   ],

@@ -55,6 +55,13 @@ import { GlobalConfig } from '@/config/config.type';
 import { QrCodeResponseDto } from './dto/qr-code-response.dto';
 import { ScanProducer } from '@/shared/queues/scan/scan.producer';
 import { UrlScanDetails } from '@/common/interfaces/scan.interface';
+import {
+  UserMonthlyAnalytics,
+  TopLinkData,
+  TopCountryData,
+  TopDeviceData,
+  TopReferrerData,
+} from '@/common/interfaces/email.interface';
 
 @Injectable()
 export class LinkService {
@@ -826,6 +833,211 @@ export class LinkService {
         referrer: item.referrerDomain!,
         count: item._count.referrerDomain,
       })),
+    };
+  }
+
+  /**
+   * Get aggregated monthly analytics for all of a user's links
+   * Used by monthly report cron - runs all queries in parallel for efficiency
+   */
+  async getUserMonthlyAnalytics(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<UserMonthlyAnalytics> {
+    // Previous month date range for growth calculation
+    const prevMonthStart = new Date(startDate);
+    prevMonthStart.setMonth(prevMonthStart.getMonth() - 1);
+    const prevMonthEnd = new Date(endDate);
+    prevMonthEnd.setMonth(prevMonthEnd.getMonth() - 1);
+
+    const [
+      totalClicks,
+      uniqueVisitorsResult,
+      totalActiveLinks,
+      linksCreatedThisMonth,
+      previousMonthClicks,
+      topLinksRaw,
+      topCountriesRaw,
+      topDevicesRaw,
+      topReferrersRaw,
+      clicksByDateRaw,
+    ] = await Promise.all([
+      // Total clicks this month
+      this.prisma.linkAnalytics.count({
+        where: {
+          link: { userId },
+          clickedAt: { gte: startDate, lte: endDate },
+        },
+      }),
+
+      // Unique visitors this month
+      this.prisma.linkAnalytics.groupBy({
+        by: ['visitorId'],
+        where: {
+          link: { userId },
+          clickedAt: { gte: startDate, lte: endDate },
+          isUnique: true,
+        },
+      }),
+
+      // Total active links
+      this.prisma.link.count({
+        where: { userId, isArchived: false },
+      }),
+
+      // Links created this month
+      this.prisma.link.count({
+        where: {
+          userId,
+          createdAt: { gte: startDate, lte: endDate },
+        },
+      }),
+
+      // Previous month clicks for growth calculation
+      this.prisma.linkAnalytics.count({
+        where: {
+          link: { userId },
+          clickedAt: { gte: prevMonthStart, lte: prevMonthEnd },
+        },
+      }),
+
+      // Top 5 performing links
+      this.prisma.link.findMany({
+        where: { userId, isArchived: false },
+        select: {
+          shortCode: true,
+          title: true,
+          _count: {
+            select: {
+              analytics: {
+                where: { clickedAt: { gte: startDate, lte: endDate } },
+              },
+            },
+          },
+        },
+        orderBy: { analytics: { _count: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 countries
+      this.prisma.linkAnalytics.groupBy({
+        by: ['country'],
+        where: {
+          link: { userId },
+          clickedAt: { gte: startDate, lte: endDate },
+          country: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+
+      // Top devices
+      this.prisma.linkAnalytics.groupBy({
+        by: ['device'],
+        where: {
+          link: { userId },
+          clickedAt: { gte: startDate, lte: endDate },
+          device: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+
+      // Top 5 referrers
+      this.prisma.linkAnalytics.groupBy({
+        by: ['referrerDomain'],
+        where: {
+          link: { userId },
+          clickedAt: { gte: startDate, lte: endDate },
+          referrerDomain: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+
+      // Clicks by date for best day
+      this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+        SELECT
+          DATE("clickedAt") as date,
+          COUNT(*)::bigint as count
+        FROM "LinkAnalytics" la
+        JOIN "Link" l ON la."linkId" = l.id
+        WHERE l."userId" = ${userId}
+          AND la."clickedAt" >= ${startDate}
+          AND la."clickedAt" <= ${endDate}
+        GROUP BY DATE("clickedAt")
+        ORDER BY count DESC
+        LIMIT 1
+      `,
+    ]);
+
+    // Get unique clicks for top links
+    const topLinks: TopLinkData[] = await Promise.all(
+      topLinksRaw
+        .filter((l) => l._count.analytics > 0)
+        .map(async (link) => {
+          const uniqueClicks = await this.prisma.linkAnalytics.count({
+            where: {
+              link: { shortCode: link.shortCode },
+              clickedAt: { gte: startDate, lte: endDate },
+              isUnique: true,
+            },
+          });
+          return {
+            shortCode: link.shortCode,
+            title: link.title ?? undefined,
+            clicks: link._count.analytics,
+            uniqueClicks,
+          };
+        }),
+    );
+
+    // Calculate device percentages
+    const totalDeviceClicks = topDevicesRaw.reduce(
+      (sum, d) => sum + d._count.id,
+      0,
+    );
+    const topDevices: TopDeviceData[] = topDevicesRaw.map((d) => ({
+      device: d.device ?? 'Unknown',
+      clicks: d._count.id,
+      percentage:
+        totalDeviceClicks > 0
+          ? Math.round((d._count.id / totalDeviceClicks) * 100)
+          : 0,
+    }));
+
+    const topCountries: TopCountryData[] = topCountriesRaw.map((c) => ({
+      country: c.country ?? 'Unknown',
+      clicks: c._count.id,
+    }));
+
+    const topReferrers: TopReferrerData[] = topReferrersRaw.map((r) => ({
+      referrer: r.referrerDomain ?? 'Direct',
+      clicks: r._count.id,
+    }));
+
+    const bestDay =
+      clicksByDateRaw.length > 0 && clicksByDateRaw[0]
+        ? {
+            date: clicksByDateRaw[0].date.toISOString().split('T')[0]!,
+            clicks: Number(clicksByDateRaw[0].count),
+          }
+        : undefined;
+
+    return {
+      totalClicks,
+      uniqueVisitors: uniqueVisitorsResult.length,
+      totalActiveLinks,
+      linksCreatedThisMonth,
+      previousMonthClicks,
+      topLinks,
+      topCountries,
+      topDevices,
+      topReferrers,
+      bestDay,
     };
   }
 
