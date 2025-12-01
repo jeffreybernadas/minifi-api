@@ -187,6 +187,7 @@ export class LinkController {
     description: 'Not Found - Link does not exist or user is not the owner',
     errorCode: 'NOT_FOUND',
   })
+  @UseGuards(SubscriptionTierGuard)
   updateLink(
     @AuthenticatedUser() user: KeycloakJWT,
     @Param('id') id: string,
