@@ -18,12 +18,12 @@ export class FileService {
     bucket?: string,
     folder?: string,
   ) {
-    const bucketName = bucket ?? 'thecodebit';
+    const bucketName = bucket ?? this.configService.getOrThrow('minio.bucket');
     const exists = await this.minioClient.bucketExists(bucketName);
     if (!exists) {
       await this.minioClient.makeBucket(bucketName);
     }
-    const folderName = folder ?? 'testUpload';
+    const folderName = folder ?? this.configService.getOrThrow('minio.folder');
     const fileName = body.fileName ?? file.originalname;
 
     const objectName = `${folderName}/${Date.now()}-${fileName}`;
@@ -41,7 +41,7 @@ export class FileService {
       filename: objectName,
       mimetype: file.mimetype,
       size: file.size,
-      path: `${this.configService.getOrThrow('minio.url')}/${bucketName}/${objectName}`,
+      path: `${this.configService.getOrThrow('minio.url', { infer: true })}/${bucketName}/${objectName}`,
     };
   }
 
@@ -52,12 +52,12 @@ export class FileService {
     bucket?: string,
     folder?: string,
   ) {
-    const bucketName = bucket ?? 'thecodebit';
+    const bucketName = bucket ?? this.configService.getOrThrow('minio.bucket');
     const exists = await this.minioClient.bucketExists(bucketName);
     if (!exists) {
       await this.minioClient.makeBucket(bucketName);
     }
-    const folderName = folder ?? 'testUpload';
+    const folderName = folder ?? this.configService.getOrThrow('minio.folder');
 
     const uploadPromises = files.map(async (file) => {
       const fileName = file.originalname;
