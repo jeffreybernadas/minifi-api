@@ -173,6 +173,8 @@ export class LinkService {
 
     const expiresAt = this.addDays(new Date(), GUEST_LIMITS.retentionDays);
 
+    // Guest links are marked SUSPICIOUS by default (no AI scan to save costs)
+    // This shows a warning to users clicking the link
     const link = await this.prisma.link.create({
       data: {
         userId: null,
@@ -183,7 +185,17 @@ export class LinkService {
         shortCode,
         status: LinkStatus.ACTIVE,
         expiresAt,
-        scanStatus: ScanStatus.PENDING,
+        scanStatus: ScanStatus.SUSPICIOUS,
+        scanScore: 0.5,
+        scannedAt: new Date(),
+        scanDetails: {
+          isSafe: false,
+          threats: ['unverified_source'],
+          reasoning:
+            'This link was created by an anonymous guest user and has not been verified. Proceed with caution.',
+          recommendations:
+            'Verify the destination URL before entering any sensitive information. For trusted short links, ask the sender to create an account.',
+        },
       },
     });
 
