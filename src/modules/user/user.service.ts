@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/database/database.service';
 import { LoggerService } from '@/shared/logger/logger.service';
@@ -91,11 +91,23 @@ export class UserService {
    * @param userId - Keycloak sub (user ID)
    * @param dto - Fields to update
    * @returns Updated user record
+   * @throws NotFoundException if user doesn't exist
    */
   async updatePreferences(
     userId: string,
     dto: UpdateUserPreferencesDto,
   ): Promise<User> {
+    // Verify user exists first
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found. Please access your profile first to sync your account.',
+      );
+    }
+
     this.logger.log(`Updating preferences for user: ${userId}`, 'UserService');
 
     return this.prisma.user.update({

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/database/database.service';
 import {
   SubscriptionStatus,
@@ -34,6 +34,7 @@ export class SubscriptionService {
    *
    * @param userId - Keycloak user ID (sub claim)
    * @returns Existing subscription or newly created FREE subscription
+   * @throws NotFoundException if user doesn't exist in database
    */
   async getOrCreateSubscription(userId: string) {
     const existing = await this.prisma.subscription.findUnique({
@@ -41,6 +42,18 @@ export class SubscriptionService {
     });
 
     if (existing) return existing;
+
+    // Verify user exists before creating subscription
+    // Users are created via sync-on-demand when they first access their profile
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found. Please access your profile first to sync your account.',
+      );
+    }
 
     const subscription = await this.prisma.subscription.create({
       data: {
