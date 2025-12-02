@@ -20,6 +20,7 @@ enum LinkStatus {
   SCHEDULED
   DISABLED
   ARCHIVED
+  BLOCKED
 }
 
 enum ScanStatus {
@@ -70,12 +71,18 @@ model User {
   tags     Tag[]
   subscription Subscription?
 
+  // Admin moderation
+  isBlocked     Boolean   @default(false)
+  blockedAt     DateTime?
+  blockedReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([username])
   @@index([userType])
+  @@index([isBlocked])
 }
 
 enum ChatType {
