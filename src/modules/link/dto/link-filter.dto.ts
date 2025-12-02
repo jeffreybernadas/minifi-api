@@ -24,4 +24,12 @@ export class LinkFilterDto extends OffsetPageOptionsDto {
   @IsOptional()
   @IsBoolean()
   isArchived?: boolean;
+
+  // Override parent's search property documentation to specify which fields are searchable
+  @ApiPropertyOptional({
+    description:
+      'Search query - searches in title, description, originalUrl, shortCode, and customAlias (case-insensitive)',
+    example: 'my-link',
+  })
+  override search?: string;
 }

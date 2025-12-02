@@ -9,6 +9,7 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateLinkDto {
@@ -29,21 +30,34 @@ export class UpdateLinkDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Password to protect link. Set to null to remove password protection.',
+    nullable: true,
+  })
   @IsOptional()
+  @ValidateIf((o) => o.password !== null)
   @IsString()
   @MinLength(6)
-  password?: string;
+  password?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Scheduled activation date. Set to null to remove scheduling.',
+    nullable: true,
+  })
   @IsOptional()
+  @ValidateIf((o) => o.scheduledAt !== null)
   @IsDateString()
-  scheduledAt?: string;
+  scheduledAt?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Expiration date. Set to null to remove expiration.',
+    nullable: true,
+  })
   @IsOptional()
+  @ValidateIf((o) => o.expiresAt !== null)
   @IsDateString()
-  expiresAt?: string;
+  expiresAt?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()

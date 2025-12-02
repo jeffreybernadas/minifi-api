@@ -30,6 +30,7 @@ import {
   generateVisitorId,
   extractReferrerDomain,
 } from '@/utils/visitor/visitor-id.util';
+import { maskIpAddress } from '@/utils/visitor/ip-mask.util';
 import { LoggerService } from '@/shared/logger/logger.service';
 import UAParser from 'ua-parser-js';
 import * as geoip from 'geoip-lite';
@@ -252,6 +253,18 @@ export class LinkService {
                   mode: Prisma.QueryMode.insensitive,
                 },
               },
+              {
+                shortCode: {
+                  contains: filters.search,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
+              {
+                customAlias: {
+                  contains: filters.search,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
             ],
           }
         : {}),
@@ -304,8 +317,11 @@ export class LinkService {
       await this.ensureAliasAvailability(dto.customAlias, id);
     }
 
+    // Handle scheduledAt: null = clear, string = update, undefined = keep existing
     let scheduledAt = link.scheduledAt;
-    if (dto.scheduledAt) {
+    if (dto.scheduledAt === null) {
+      scheduledAt = null;
+    } else if (dto.scheduledAt !== undefined) {
       scheduledAt = new Date(dto.scheduledAt);
       if (Number.isNaN(scheduledAt.getTime())) {
         throw new BadRequestException('Invalid scheduledAt date');
@@ -315,8 +331,11 @@ export class LinkService {
       }
     }
 
+    // Handle expiresAt: null = clear, string = update, undefined = keep existing
     let expiresAt = link.expiresAt;
-    if (dto.expiresAt) {
+    if (dto.expiresAt === null) {
+      expiresAt = null;
+    } else if (dto.expiresAt !== undefined) {
       expiresAt = new Date(dto.expiresAt);
       if (Number.isNaN(expiresAt.getTime())) {
         throw new BadRequestException('Invalid expiresAt date');
@@ -329,15 +348,31 @@ export class LinkService {
       );
     }
 
-    const password = dto.password
-      ? await hashPassword(dto.password)
-      : undefined;
+    // Handle password: null = clear, string = update, undefined = keep existing
+    let password: string | null | undefined;
+    if (dto.password === null) {
+      password = null;
+    } else if (dto.password !== undefined) {
+      password = await hashPassword(dto.password);
+    }
 
     if (dto.tagIds?.length) {
       await this.ensureTagsBelongToUser(userId, dto.tagIds);
     }
 
-    const data = {
+    const data: {
+      customAlias?: string;
+      title?: string;
+      description?: string;
+      scheduledAt?: Date | null;
+      expiresAt?: Date | null;
+      clickLimit?: number;
+      isOneTime?: boolean;
+      isArchived?: boolean;
+      notes?: string;
+      password?: string | null;
+      status?: LinkStatus;
+    } = {
       customAlias: dto.customAlias,
       title: dto.title,
       description: dto.description,
@@ -347,13 +382,17 @@ export class LinkService {
       isOneTime: dto.isOneTime ?? link.isOneTime,
       isArchived: dto.isArchived ?? link.isArchived,
       notes: dto.notes,
-      password,
       status: scheduledAt
         ? LinkStatus.SCHEDULED
         : (dto.isArchived ?? link.isArchived)
           ? LinkStatus.ARCHIVED
           : link.status,
     };
+
+    // Only include password in update if explicitly set (null or new value)
+    if (dto.password !== undefined) {
+      data.password = password;
+    }
 
     const updated = await this.prisma.link.update({
       where: { id },
@@ -524,6 +563,12 @@ export class LinkService {
 
     if (!link) {
       throw new NotFoundException('Link not found');
+    }
+
+    if (link.status === LinkStatus.BLOCKED) {
+      throw new ForbiddenException(
+        'This link has been blocked by an administrator',
+      );
     }
 
     if (link.isArchived || link.status === LinkStatus.DISABLED) {
@@ -718,9 +763,15 @@ export class LinkService {
       { where, orderBy: { clickedAt: 'desc' } },
     );
 
+    // Mask IP addresses for privacy compliance (GDPR)
+    const maskedData = paginated.data.map((analytics) => ({
+      ...analytics,
+      ipAddress: maskIpAddress(analytics.ipAddress),
+    })) as LinkAnalyticsResponseDto[];
+
     return {
       ...paginated,
-      data: paginated.data as LinkAnalyticsResponseDto[],
+      data: maskedData,
     };
   }
 
