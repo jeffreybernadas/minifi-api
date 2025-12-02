@@ -1,4 +1,10 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Matches,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -15,18 +21,27 @@ export class UpdateUserPreferencesDto {
   emailNotificationsEnabled?: boolean;
 
   @ApiPropertyOptional({
-    description: 'User phone number',
+    description: 'User phone number in E.164 format',
     example: '+1234567890',
   })
   @IsString()
   @IsOptional()
+  @Matches(/^\+?[1-9]\d{1,14}$/, {
+    message: 'Phone number must be in E.164 format (e.g., +1234567890)',
+  })
   phoneNumber?: string;
 
   @ApiPropertyOptional({
     description: 'URL to user avatar image',
     example: 'https://example.com/avatar.jpg',
   })
-  @IsString()
+  @IsUrl(
+    { require_protocol: true },
+    {
+      message:
+        'Avatar URL must be a valid URL with protocol (http:// or https://)',
+    },
+  )
   @IsOptional()
   avatarUrl?: string;
 

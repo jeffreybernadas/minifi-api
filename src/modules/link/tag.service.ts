@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/database/database.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
@@ -8,6 +12,22 @@ export class TagService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createTag(userId: string, dto: CreateTagDto) {
+    // Check if tag with same name already exists for this user
+    const existing = await this.prisma.tag.findUnique({
+      where: {
+        userId_name: {
+          userId,
+          name: dto.name,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        `A tag with the name "${dto.name}" already exists. Please choose a different name.`,
+      );
+    }
+
     return await this.prisma.tag.create({
       data: {
         userId,
@@ -32,6 +52,24 @@ export class TagService {
 
     if (!existing) {
       throw new NotFoundException('Tag not found');
+    }
+
+    // If updating name, check for duplicate
+    if (dto.name && dto.name !== existing.name) {
+      const duplicate = await this.prisma.tag.findUnique({
+        where: {
+          userId_name: {
+            userId,
+            name: dto.name,
+          },
+        },
+      });
+
+      if (duplicate) {
+        throw new BadRequestException(
+          `A tag with the name "${dto.name}" already exists. Please choose a different name.`,
+        );
+      }
     }
 
     return this.prisma.tag.update({
@@ -84,12 +122,17 @@ export class TagService {
   }
 
   async removeTagFromLink(linkId: string, tagId: string, userId: string) {
-    const link = await this.prisma.link.findFirst({
-      where: { id: linkId, userId },
-    });
+    const [link, tag] = await Promise.all([
+      this.prisma.link.findFirst({ where: { id: linkId, userId } }),
+      this.prisma.tag.findFirst({ where: { id: tagId, userId } }),
+    ]);
 
     if (!link) {
       throw new NotFoundException('Link not found');
+    }
+
+    if (!tag) {
+      throw new NotFoundException('Tag not found');
     }
 
     await this.prisma.linkTag.deleteMany({
