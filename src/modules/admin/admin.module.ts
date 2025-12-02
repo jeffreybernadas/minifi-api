@@ -6,9 +6,10 @@ import { AdminService } from './admin.service';
 import { AdminUserService } from './admin-user.service';
 import { AdminLinkService } from './admin-link.service';
 import { ScanQueueModule } from '@/shared/queues/scan/scan.module';
+import { SubscriptionModule } from '@/modules/subscription/subscription.module';
 
 @Module({
-  imports: [ScanQueueModule],
+  imports: [ScanQueueModule, SubscriptionModule],
   controllers: [AdminController, AdminUserController, AdminLinkController],
   providers: [AdminService, AdminUserService, AdminLinkService],
 })

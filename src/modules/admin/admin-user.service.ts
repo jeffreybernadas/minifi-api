@@ -9,6 +9,8 @@ import {
 } from '@/generated/prisma/client';
 import { OffsetPaginatedDto } from '@/common/dto/offset-pagination';
 import { offsetPaginateWithPrisma } from '@/utils/pagination/prisma-pagination.util';
+import { StripeService } from '@/modules/subscription/stripe.service';
+import { LoggerService } from '@/shared/logger/logger.service';
 import {
   AdminUserFilterDto,
   AdminUserResponseDto,
@@ -17,7 +19,11 @@ import {
 
 @Injectable()
 export class AdminUserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripeService: StripeService,
+    private readonly logger: LoggerService,
+  ) {}
 
   async getUsers(
     filters: AdminUserFilterDto,
@@ -167,6 +173,34 @@ export class AdminUserService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // Check for active Stripe subscription and cancel it before deletion
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { userId: id },
+      select: { stripeSubscriptionId: true, status: true },
+    });
+
+    if (
+      subscription?.stripeSubscriptionId &&
+      subscription.status === SubscriptionStatus.ACTIVE
+    ) {
+      try {
+        await this.stripeService.cancelSubscriptionImmediately(
+          subscription.stripeSubscriptionId,
+        );
+        this.logger.log(
+          `Cancelled Stripe subscription for deleted user: ${id}`,
+          'AdminUserService',
+        );
+      } catch (error) {
+        // Log but don't block deletion - admin action takes priority
+        this.logger.error(
+          `Failed to cancel Stripe subscription for user ${id}: ${error.message}`,
+          error.stack,
+          'AdminUserService',
+        );
+      }
     }
 
     await this.prisma.user.delete({ where: { id } });

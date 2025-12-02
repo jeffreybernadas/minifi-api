@@ -178,6 +178,20 @@ export class StripeService {
     };
   }
 
+  /**
+   * Cancel a Stripe subscription immediately (used by admin for user deletion).
+   * Unlike cancelSubscription(), this terminates immediately instead of at period end.
+   */
+  async cancelSubscriptionImmediately(
+    stripeSubscriptionId: string,
+  ): Promise<void> {
+    await this.stripe.subscriptions.cancel(stripeSubscriptionId);
+    this.logger.log(
+      `Immediately cancelled Stripe subscription: ${stripeSubscriptionId}`,
+      'StripeService',
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // WEBHOOK HANDLING
   // ─────────────────────────────────────────────────────────────────────────────
