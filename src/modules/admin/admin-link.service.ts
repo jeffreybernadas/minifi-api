@@ -196,7 +196,7 @@ export class AdminLinkService {
 
     await this.prisma.link.update({
       where: { id },
-      data: { status },
+      data: { status, notes: null },
     });
 
     return this.getLinkById(id);
