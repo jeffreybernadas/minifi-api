@@ -151,10 +151,41 @@ export class ChatQueueService {
     unreadChats: UnreadChatDataDto[],
   ): Promise<void> {
     try {
-      // TODO: Fetch user email from Keycloak or User table
-      // For now, we'll skip users without email
-      // In production, you'd query Keycloak API or have a User table
-      const userEmail = `user-${userId}@example.com`; // Placeholder
+      // Fetch user from database to get email and check notification preferences
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          email: true,
+          emailNotificationsEnabled: true,
+          firstName: true,
+          subscription: true,
+        },
+      });
+
+      // Skip if user not found, notifications disabled, or no subscription
+      if (!user) {
+        this.logger.warn(
+          `User not found for unread digest: ${userId}`,
+          'ChatQueueService',
+        );
+        return;
+      }
+
+      if (!user.subscription) {
+        this.logger.log(
+          `Skipping unread digest - no subscription for user: ${userId}`,
+          'ChatQueueService',
+        );
+        return;
+      }
+
+      if (!user.emailNotificationsEnabled) {
+        this.logger.log(
+          `Skipping unread digest - notifications disabled for user: ${userId}`,
+          'ChatQueueService',
+        );
+        return;
+      }
 
       const totalUnreadCount = unreadChats.reduce(
         (sum, chat) => sum + chat.unreadCount,
@@ -174,7 +205,7 @@ export class ChatQueueService {
       // Publish email job to queue
       await this.emailProducer.publishSendEmail({
         userId,
-        to: userEmail,
+        to: user.email,
         subject: `You have ${totalUnreadCount} unread message${totalUnreadCount > 1 ? 's' : ''}`,
         html,
         from: defaultSender,
@@ -185,6 +216,7 @@ export class ChatQueueService {
         'ChatQueueService',
         {
           userId,
+          email: user.email,
           unreadChatsCount: unreadChats.length,
           totalUnreadCount,
         },

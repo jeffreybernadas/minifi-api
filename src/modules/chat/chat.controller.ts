@@ -7,6 +7,7 @@ import {
   Query,
   Put,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
@@ -28,6 +29,8 @@ import {
   CursorPaginatedDto,
 } from '@/common/dto/cursor-pagination';
 import { KeycloakJWT } from '../user/interfaces/keycloak-jwt.interface';
+import { GroupChatBlockerGuard } from '@/shared/guards/group-chat-blocker.guard';
+import { AddMemberBlockerGuard } from '@/shared/guards/add-member-blocker.guard';
 
 @ApiTags('chat')
 @ApiBearerAuth('JWT')
@@ -42,10 +45,11 @@ export class ChatController {
   ) {}
 
   @Post()
+  @UseGuards(GroupChatBlockerGuard)
   @ApiOperation({
     summary: 'Create a new chat',
     description:
-      'Creates a new chat (GROUP or DIRECT). The authenticated user is automatically added as the creator and a member. For DIRECT chats, exactly 1 other user must be specified. For GROUP chats, a name is required.',
+      'Creates a new chat (GROUP or DIRECT). The authenticated user is automatically added as the creator and a member. For DIRECT chats, exactly 1 other user must be specified. For GROUP chats, a name is required. Note: GROUP chats are currently disabled.',
   })
   @ApiStandardResponse({
     status: 201,
@@ -61,6 +65,11 @@ export class ChatController {
     status: 401,
     description: 'Unauthorized - Invalid or missing token',
     errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 403,
+    description: 'Forbidden - GROUP chats are currently disabled',
+    errorCode: 'FORBIDDEN',
   })
   async createChat(
     @AuthenticatedUser() user: KeycloakJWT,
@@ -366,10 +375,11 @@ export class ChatController {
   }
 
   @Post(':chatId/members')
+  @UseGuards(AddMemberBlockerGuard)
   @ApiOperation({
     summary: 'Add a member to a group chat',
     description:
-      'Adds a new member to an existing group chat. Only works for GROUP chats (not DIRECT). The requesting user must be a member of the chat. The user being added must not already be a member.',
+      'Adds a new member to an existing group chat. Only works for GROUP chats (not DIRECT). The requesting user must be a member of the chat. The user being added must not already be a member. Note: This endpoint is currently disabled.',
   })
   @ApiStandardResponse({
     status: 201,
@@ -389,7 +399,8 @@ export class ChatController {
   })
   @ApiStandardErrorResponse({
     status: 403,
-    description: 'Forbidden - User is not a member of this chat',
+    description:
+      'Forbidden - User is not a member of this chat or endpoint is disabled.',
     errorCode: 'FORBIDDEN',
   })
   @ApiStandardErrorResponse({

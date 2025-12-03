@@ -18,7 +18,7 @@ export class AdminGuard implements CanActivate {
     }
 
     const realmRoles = user.realm_access?.roles ?? [];
-    const resourceRoles = user.resource_access?.['minifi-api']?.roles ?? [];
+    const resourceRoles = user.resource_access?.['minifi']?.roles ?? [];
     const allRoles = [...realmRoles, ...resourceRoles];
 
     const isAdmin =

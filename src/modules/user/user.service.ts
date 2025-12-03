@@ -53,6 +53,14 @@ export class UserService {
         'UserService',
       );
 
+      // Check if user has admin role from Keycloak JWT
+      const realmRoles = keycloakUser.realm_access?.roles ?? [];
+      const resourceRoles =
+        keycloakUser.resource_access?.['minifi']?.roles ?? [];
+      const allRoles = [...realmRoles, ...resourceRoles];
+      const isAdmin =
+        allRoles.includes('admin') || allRoles.includes('superadmin');
+
       user = await this.prisma.user.create({
         data: {
           // Use Keycloak sub as primary key
@@ -67,6 +75,8 @@ export class UserService {
           phoneNumber: null,
           avatarUrl: null,
           address: null,
+          // Admin role flag
+          isAdmin,
         },
       });
 
