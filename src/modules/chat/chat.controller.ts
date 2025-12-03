@@ -21,7 +21,6 @@ import { CreateChatDto } from './dto/create-chat.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
-import { AddMemberDto } from './dto/add-member.dto';
 import { WebSocketService } from '@/shared/websocket/websocket.service';
 import { WEBSOCKET_EVENTS } from '@/constants/websocket.constant';
 import {
@@ -29,11 +28,19 @@ import {
   CursorPaginatedDto,
 } from '@/common/dto/cursor-pagination';
 import { KeycloakJWT } from '../user/interfaces/keycloak-jwt.interface';
-import { GroupChatBlockerGuard } from '@/shared/guards/group-chat-blocker.guard';
-import { AddMemberBlockerGuard } from '@/shared/guards/add-member-blocker.guard';
+import { ProTierGuard } from '@/shared/guards/pro-tier.guard';
 
+/**
+ * Chat Controller
+ *
+ * PRO-to-Admin Direct Chat feature:
+ * - All endpoints require PRO subscription (ProTierGuard)
+ * - Only DIRECT chats are allowed (GROUP blocked in service)
+ * - Admin is auto-assigned when creating chat
+ */
 @ApiTags('chat')
 @ApiBearerAuth('JWT')
+@UseGuards(ProTierGuard)
 @Controller({
   path: 'chat',
   version: '1',
@@ -45,20 +52,19 @@ export class ChatController {
   ) {}
 
   @Post()
-  @UseGuards(GroupChatBlockerGuard)
   @ApiOperation({
-    summary: 'Create a new chat',
+    summary: 'Create a direct chat with admin',
     description:
-      'Creates a new chat (GROUP or DIRECT). The authenticated user is automatically added as the creator and a member. For DIRECT chats, exactly 1 other user must be specified. For GROUP chats, a name is required. Note: GROUP chats are currently disabled.',
+      'Creates a new DIRECT chat with the platform admin. PRO subscription required. The admin is automatically assigned as the other member. If a chat with admin already exists, returns the existing chat instead of creating a duplicate.',
   })
   @ApiStandardResponse({
     status: 201,
-    description: 'Chat created successfully',
+    description: 'Chat created successfully (or existing chat returned)',
     type: ChatResponseDto,
   })
   @ApiStandardErrorResponse({
     status: 400,
-    description: 'Validation Error',
+    description: 'Validation Error - GROUP type not allowed',
     errorCode: 'VALIDATION_ERROR',
   })
   @ApiStandardErrorResponse({
@@ -68,8 +74,13 @@ export class ChatController {
   })
   @ApiStandardErrorResponse({
     status: 403,
-    description: 'Forbidden - GROUP chats are currently disabled',
+    description: 'Forbidden - PRO subscription required',
     errorCode: 'FORBIDDEN',
+  })
+  @ApiStandardErrorResponse({
+    status: 404,
+    description: 'Not Found - Admin user not found',
+    errorCode: 'NOT_FOUND',
   })
   async createChat(
     @AuthenticatedUser() user: KeycloakJWT,
@@ -103,7 +114,7 @@ export class ChatController {
   @ApiOperation({
     summary: 'List all chats user belongs to',
     description:
-      'Retrieves all chats where the authenticated user is a member. Returns chats ordered by most recently updated first.',
+      'Retrieves all chats where the authenticated PRO user is a member. Returns chats ordered by most recently updated first. PRO subscription required.',
   })
   @ApiStandardResponse({
     status: 200,
@@ -115,6 +126,11 @@ export class ChatController {
     status: 401,
     description: 'Unauthorized - Invalid or missing token',
     errorCode: 'UNAUTHORIZED',
+  })
+  @ApiStandardErrorResponse({
+    status: 403,
+    description: 'Forbidden - PRO subscription required',
+    errorCode: 'FORBIDDEN',
   })
   getUserChats(
     @AuthenticatedUser() user: KeycloakJWT,
@@ -372,84 +388,5 @@ export class ChatController {
     );
 
     return deletedMessage;
-  }
-
-  @Post(':chatId/members')
-  @UseGuards(AddMemberBlockerGuard)
-  @ApiOperation({
-    summary: 'Add a member to a group chat',
-    description:
-      'Adds a new member to an existing group chat. Only works for GROUP chats (not DIRECT). The requesting user must be a member of the chat. The user being added must not already be a member. Note: This endpoint is currently disabled.',
-  })
-  @ApiStandardResponse({
-    status: 201,
-    description: 'Member added successfully',
-    type: ChatResponseDto,
-  })
-  @ApiStandardErrorResponse({
-    status: 400,
-    description:
-      'Validation Error - Chat is not a group or user already a member',
-    errorCode: 'VALIDATION_ERROR',
-  })
-  @ApiStandardErrorResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing token',
-    errorCode: 'UNAUTHORIZED',
-  })
-  @ApiStandardErrorResponse({
-    status: 403,
-    description:
-      'Forbidden - User is not a member of this chat or endpoint is disabled.',
-    errorCode: 'FORBIDDEN',
-  })
-  @ApiStandardErrorResponse({
-    status: 404,
-    description: 'Not Found - Chat does not exist',
-    errorCode: 'NOT_FOUND',
-  })
-  async addMemberToChat(
-    @AuthenticatedUser() user: KeycloakJWT,
-    @Param('chatId') chatId: string,
-    @Body() dto: AddMemberDto,
-  ): Promise<ChatResponseDto> {
-    const requesterId = user.sub;
-
-    // Add member via service
-    const updatedChat = await this.chatService.addMemberToChat(
-      chatId,
-      requesterId,
-      dto,
-    );
-
-    // Emit WebSocket event to chat room (notify existing members)
-    this.websocketService.emitToRoom(
-      `chat:${chatId}`,
-      WEBSOCKET_EVENTS.MEMBER_ADDED,
-      {
-        chatId,
-        userId: dto.userId,
-        addedBy: requesterId,
-      },
-      {
-        chatId,
-        memberCount: updatedChat.members?.length ?? 0,
-      },
-    );
-
-    // Emit WebSocket event to the new member's personal room
-    this.websocketService.emitToRoom(
-      `user:${dto.userId}`,
-      WEBSOCKET_EVENTS.USER_JOINED_CHAT,
-      {
-        chatId: updatedChat.id,
-        chatName: updatedChat.name,
-        chatType: updatedChat.type,
-        addedBy: requesterId,
-      },
-      { userId: dto.userId },
-    );
-
-    return updatedChat;
   }
 }

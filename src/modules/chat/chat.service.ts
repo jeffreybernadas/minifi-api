@@ -27,8 +27,34 @@ export class ChatService {
   ) {}
 
   /**
-   * Create a new chat (GROUP or DIRECT)
-   * @param creatorId - Keycloak user ID of the creator
+   * Get the admin user from the database
+   * Used for PRO-to-admin chat feature
+   * @returns Admin user record
+   * @throws NotFoundException if no admin user exists
+   */
+  async getAdminUser() {
+    const admin = await this.prisma.user.findFirst({
+      where: { isAdmin: true },
+    });
+
+    if (!admin) {
+      this.logger.error('No admin user found in database', 'ChatService', {});
+      throw new NotFoundException(
+        'Admin user not found. Please contact support.',
+      );
+    }
+
+    return admin;
+  }
+
+  /**
+   * Create a new DIRECT chat with admin
+   * For PRO-to-admin chat feature:
+   * - Only DIRECT type is allowed (GROUP blocked by guard)
+   * - Admin is auto-injected as the other member
+   * - memberIds from request is ignored
+   *
+   * @param creatorId - Keycloak user ID of the PRO user
    * @param dto - Chat creation data
    * @returns Created chat with members
    */
@@ -36,32 +62,64 @@ export class ChatService {
     creatorId: string,
     dto: CreateChatDto,
   ): Promise<ChatResponseDto> {
-    // Validate GROUP chat has a name
-    if (dto.type === ChatType.GROUP && !dto.name) {
-      throw new BadRequestException('Group chats must have a name');
-    }
-
-    // Validate DIRECT chat has exactly 1 other member
-    if (dto.type === ChatType.DIRECT && dto.memberIds.length !== 1) {
+    // GROUP chats are blocked by GroupChatBlockerGuard, but validate just in case
+    if (dto.type === ChatType.GROUP) {
       throw new BadRequestException(
-        'Direct chats must have exactly 1 other member',
+        'Group chats are not available. Only direct chat with admin is supported.',
       );
     }
 
-    // Remove duplicates and ensure creator is not in memberIds
-    const uniqueMemberIds = Array.from(
-      new Set(dto.memberIds.filter((id) => id !== creatorId)),
-    );
+    // Get admin user - auto-inject as chat member
+    const admin = await this.getAdminUser();
 
-    // Validate we still have the right number of members after deduplication
-    if (dto.type === ChatType.DIRECT && uniqueMemberIds.length !== 1) {
+    // Check if creator is trying to chat with themselves (edge case: admin is PRO user)
+    if (admin.id === creatorId) {
       throw new BadRequestException(
-        'Direct chats must have exactly 1 other member (excluding creator)',
+        'Admin cannot create a support chat with themselves.',
       );
     }
 
-    if (uniqueMemberIds.length === 0) {
-      throw new BadRequestException('Chat must have at least one other member');
+    // Check if a DIRECT chat already exists between this user and admin
+    const existingChat = await this.prisma.chat.findFirst({
+      where: {
+        type: ChatType.DIRECT,
+        AND: [
+          { members: { some: { userId: creatorId } } },
+          { members: { some: { userId: admin.id } } },
+        ],
+      },
+      include: {
+        members: {
+          orderBy: { joinedAt: 'asc' },
+        },
+      },
+    });
+
+    // Return existing chat instead of creating duplicate
+    if (existingChat) {
+      this.logger.log(
+        `Returning existing chat with admin: ${existingChat.id}`,
+        'ChatService',
+        {
+          chatId: existingChat.id,
+          creatorId,
+          adminId: admin.id,
+        },
+      );
+
+      return {
+        id: existingChat.id,
+        name: existingChat.name,
+        type: existingChat.type,
+        creatorId: existingChat.creatorId,
+        createdAt: existingChat.createdAt,
+        updatedAt: existingChat.updatedAt,
+        members: existingChat.members.map((member) => ({
+          id: member.id,
+          userId: member.userId,
+          joinedAt: member.joinedAt,
+        })),
+      };
     }
 
     // Create chat and members in a transaction
@@ -70,18 +128,15 @@ export class ChatService {
       const newChat = await tx.chat.create({
         data: {
           name: dto.name,
-          type: dto.type,
+          type: ChatType.DIRECT,
           creatorId,
         },
       });
 
-      // Prepare member data: creator + other members
+      // Prepare member data: creator + admin
       const memberData = [
         { chatId: newChat.id, userId: creatorId },
-        ...uniqueMemberIds.map((userId) => ({
-          chatId: newChat.id,
-          userId,
-        })),
+        { chatId: newChat.id, userId: admin.id },
       ];
 
       // Create all members
@@ -102,10 +157,11 @@ export class ChatService {
       return chatWithMembers;
     });
 
-    this.logger.log(`Chat created: ${chat!.id}`, 'ChatService', {
+    this.logger.log(`Chat created with admin: ${chat!.id}`, 'ChatService', {
       chatId: chat!.id,
       type: chat!.type,
       creatorId,
+      adminId: admin.id,
       memberCount: chat!.members.length,
     });
 
