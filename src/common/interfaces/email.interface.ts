@@ -114,3 +114,41 @@ export interface SubscriptionEmailProps {
   periodEnd?: Date | string;
   dashboardUrl: string;
 }
+
+/**
+ * Link scheduled for deletion data
+ */
+export interface DeletingLinkData {
+  shortCode: string;
+  title?: string;
+  originalUrl: string;
+  createdAt: Date | string;
+  daysUntilDeletion: number;
+  totalClicks: number;
+}
+
+/**
+ * FREE user link deletion warning email props
+ */
+export interface LinkDeletionWarningEmailProps {
+  firstName?: string;
+  deletingLinks: DeletingLinkData[];
+  totalCount: number;
+  upgradeUrl: string;
+  dashboardUrl: string;
+}
+
+/**
+ * FREE user simplified monthly report email props
+ */
+export interface FreeMonthlyReportEmailProps {
+  firstName?: string;
+  month: string;
+  year: number;
+  totalClicks: number;
+  uniqueVisitors: number;
+  totalActiveLinks: number;
+  linksCreatedThisMonth: number;
+  upgradeUrl: string;
+  dashboardUrl: string;
+}
