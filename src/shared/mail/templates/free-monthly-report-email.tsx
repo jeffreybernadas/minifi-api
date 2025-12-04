@@ -1,17 +1,22 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
+  Tailwind,
   Text,
 } from '@react-email/components';
 import { FreeMonthlyReportEmailProps } from '@/common/interfaces/email.interface';
 import * as React from 'react';
+
+const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 /**
  * FREE User Monthly Report Email Template
@@ -32,215 +37,188 @@ export const FreeMonthlyReportEmailTemplate = (
     dashboardUrl,
   } = props;
 
+  const previewText = `Your Minifi Report for ${month} ${year?.toString() || new Date().getFullYear().toString()}`;
+
   return (
     <Html>
       <Head />
-      <Preview>
-        Your Minifi Report for {month} {year.toString()}
-      </Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.heading}>
-            📊 Your {month} {year} Report
-          </Heading>
+      <Tailwind>
+        <Body className="mx-auto my-auto bg-white px-2 font-sans">
+          <Preview>{previewText}</Preview>
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+            <Section className="mt-[32px]">
+              <Img
+                src={LOGO_URL}
+                width="40"
+                height="37"
+                alt="Minifi"
+                className="mx-auto my-0"
+              />
+            </Section>
 
-          <Text style={styles.intro}>
-            {firstName ? `Hey ${firstName},` : 'Hey there,'} here's a quick
-            snapshot of your link performance last month.
-          </Text>
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+              Your {month} {year} Report
+            </Heading>
 
-          <Hr style={styles.divider} />
+            <Text className="text-[14px] text-black leading-[24px]">
+              {firstName ? `Hey ${firstName},` : 'Hey there,'} here's a quick
+              snapshot of your link performance last month.
+            </Text>
 
-          {/* Summary Stats */}
-          <Section style={styles.statsGrid}>
-            <table style={styles.statsTable}>
-              <tbody>
-                <tr>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>
-                      {totalClicks.toLocaleString()}
-                    </Text>
-                    <Text style={styles.statLabel}>Total Clicks</Text>
-                  </td>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>
-                      {uniqueVisitors.toLocaleString()}
-                    </Text>
-                    <Text style={styles.statLabel}>Unique Visitors</Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>{totalActiveLinks}</Text>
-                    <Text style={styles.statLabel}>Active Links</Text>
-                  </td>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>
-                      {linksCreatedThisMonth}
-                    </Text>
-                    <Text style={styles.statLabel}>New Links</Text>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Section>
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
 
-          <Hr style={styles.divider} />
+            {/* Summary Stats */}
+            <Section className="my-[20px]">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {totalClicks?.toLocaleString() || '0'}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        Total Clicks
+                      </Text>
+                    </td>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {uniqueVisitors?.toLocaleString() || '0'}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        Unique Visitors
+                      </Text>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {totalActiveLinks || 0}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        Active Links
+                      </Text>
+                    </td>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {linksCreatedThisMonth || 0}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        New Links
+                      </Text>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </Section>
 
-          {/* Upgrade CTA */}
-          <Section style={styles.upgradeBox}>
-            <Text style={styles.upgradeTitle}>🚀 Want More Insights?</Text>
-            <Text style={styles.upgradeText}>Upgrade to PRO to unlock:</Text>
-            <ul style={styles.featureList}>
-              <li style={styles.featureItem}>
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            {/* Upgrade CTA */}
+            <Section className="bg-blue-50 border border-blue-600 rounded-lg p-[24px] text-center">
+              <Text className="text-[18px] font-bold text-blue-700 m-0 mb-[8px]">
+                Want More Insights?
+              </Text>
+              <Text className="text-[15px] text-blue-600 m-0 mb-[16px]">
+                Upgrade to PRO to unlock:
+              </Text>
+              <Text className="text-[14px] text-blue-600 leading-[24px] m-0">
                 📍 Geographic breakdown by country
-              </li>
-              <li style={styles.featureItem}>📱 Device & browser analytics</li>
-              <li style={styles.featureItem}>🔗 Top performing links</li>
-              <li style={styles.featureItem}>🔀 Traffic source analysis</li>
-              <li style={styles.featureItem}>📈 Month-over-month growth</li>
-              <li style={styles.featureItem}>♾️ Unlimited links</li>
-            </ul>
-            <Link href={upgradeUrl} style={styles.upgradeButton}>
-              Upgrade to PRO
-            </Link>
-          </Section>
+              </Text>
+              <Text className="text-[14px] text-blue-600 leading-[24px] m-0">
+                📱 Device & browser analytics
+              </Text>
+              <Text className="text-[14px] text-blue-600 leading-[24px] m-0">
+                🔗 Top performing links
+              </Text>
+              <Text className="text-[14px] text-blue-600 leading-[24px] m-0">
+                🔀 Traffic source analysis
+              </Text>
+              <Text className="text-[14px] text-blue-600 leading-[24px] m-0">
+                📈 Month-over-month growth
+              </Text>
+              <Text className="text-[14px] text-blue-600 leading-[24px] m-0 mb-[20px]">
+                ♾️ Unlimited links
+              </Text>
+              <Button
+                className="rounded bg-blue-600 px-8 py-3 text-center font-semibold text-[12px] text-white no-underline"
+                href={upgradeUrl}
+              >
+                Upgrade to PRO
+              </Button>
+            </Section>
 
-          <Hr style={styles.divider} />
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
 
-          <Section style={styles.ctaSection}>
-            <Link href={dashboardUrl} style={styles.ctaButton}>
-              View Dashboard
-            </Link>
-          </Section>
+            <Section className="mt-[32px] mb-[32px] text-center">
+              <Button
+                className="rounded bg-[#666666] px-5 py-3 text-center font-semibold text-[12px] text-white no-underline"
+                href={dashboardUrl}
+              >
+                View Dashboard
+              </Button>
+            </Section>
 
-          <Text style={styles.footer}>
-            This is a basic report for FREE tier users.
-            <br />
-            Upgrade to PRO for detailed analytics and insights.
-          </Text>
-        </Container>
-      </Body>
+            <Text className="text-[14px] text-black leading-[24px]">
+              This is a basic report for FREE tier users. Upgrade to PRO for
+              detailed analytics and insights.
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section>
+              <Img
+                src={LOGO_URL}
+                width="24"
+                height="24"
+                alt="Minifi"
+                className="my-0"
+              />
+              <Text className="text-[#666666] text-[12px] leading-[20px] mt-[16px]">
+                Minifi - Links made simple.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px] mt-[8px]">
+                © {new Date().getFullYear()} Minifi. All rights reserved.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px]">
+                <Link
+                  href="https://minifi.link"
+                  className="text-[#666666] underline"
+                >
+                  minifi.link
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/privacy"
+                  className="text-[#666666] underline"
+                >
+                  Privacy
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/terms"
+                  className="text-[#666666] underline"
+                >
+                  Terms
+                </Link>
+              </Text>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
 };
 
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  container: {
-    backgroundColor: '#ffffff',
-    margin: '40px auto',
-    padding: '40px',
-    borderRadius: '8px',
-    maxWidth: '600px',
-  },
-  heading: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-    textAlign: 'center' as const,
-  },
-  intro: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '20px',
-    lineHeight: '1.5',
-  },
-  statsGrid: {
-    margin: '20px 0',
-  },
-  statsTable: {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-  },
-  statCell: {
-    textAlign: 'center' as const,
-    padding: '16px 8px',
-    backgroundColor: '#f7fafc',
-    borderRadius: '8px',
-    width: '50%',
-  },
-  statValue: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#3182ce',
-    marginBottom: '4px',
-  },
-  statLabel: {
-    fontSize: '12px',
-    color: '#718096',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-  },
-  upgradeBox: {
-    backgroundColor: '#ebf8ff',
-    border: '1px solid #3182ce',
-    borderRadius: '8px',
-    padding: '24px',
-    textAlign: 'center' as const,
-  },
-  upgradeTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#2b6cb0',
-    marginBottom: '8px',
-  },
-  upgradeText: {
-    fontSize: '15px',
-    color: '#2c5282',
-    marginBottom: '16px',
-  },
-  featureList: {
-    textAlign: 'left' as const,
-    margin: '0 auto 20px',
-    padding: '0 0 0 20px',
-    maxWidth: '280px',
-  },
-  featureItem: {
-    fontSize: '14px',
-    color: '#2c5282',
-    marginBottom: '8px',
-    lineHeight: '1.4',
-  },
-  upgradeButton: {
-    display: 'inline-block',
-    backgroundColor: '#3182ce',
-    color: '#ffffff',
-    fontSize: '16px',
-    fontWeight: '600',
-    padding: '12px 32px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-  },
-  divider: {
-    borderColor: '#e2e8f0',
-    marginTop: '24px',
-    marginBottom: '24px',
-  },
-  ctaSection: {
-    textAlign: 'center' as const,
-    margin: '30px 0',
-  },
-  ctaButton: {
-    display: 'inline-block',
-    backgroundColor: '#718096',
-    color: '#ffffff',
-    fontSize: '14px',
-    fontWeight: '600',
-    padding: '10px 20px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#a0aec0',
-    marginTop: '20px',
-    textAlign: 'center' as const,
-    lineHeight: '1.6',
-  },
-};
+FreeMonthlyReportEmailTemplate.PreviewProps = {
+  firstName: 'Sarah',
+  month: 'November',
+  year: 2025,
+  totalClicks: 1234,
+  uniqueVisitors: 856,
+  totalActiveLinks: 12,
+  linksCreatedThisMonth: 3,
+  upgradeUrl: 'https://minifi.link/pricing',
+  dashboardUrl: 'https://minifi.link/dashboard',
+} as FreeMonthlyReportEmailProps;
+
+export default FreeMonthlyReportEmailTemplate;

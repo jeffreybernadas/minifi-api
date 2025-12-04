@@ -1,17 +1,22 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
+  Tailwind,
   Text,
 } from '@react-email/components';
 import { SubscriptionEmailProps } from '@/common/interfaces/email.interface';
 import * as React from 'react';
+
+const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 /**
  * Subscription Email Template
@@ -19,6 +24,15 @@ import * as React from 'react';
  */
 export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
   const { firstName, action, periodEnd, dashboardUrl } = props;
+
+  const formatDate = (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
 
   const getContent = () => {
     switch (action) {
@@ -82,143 +96,132 @@ export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
   return (
     <Html>
       <Head />
-      <Preview>{content.preview}</Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.heading}>
-            {content.emoji} {content.title}
-          </Heading>
+      <Tailwind>
+        <Body className="mx-auto my-auto bg-white px-2 font-sans">
+          <Preview>{content.preview}</Preview>
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+            <Section className="mt-[32px]">
+              <Img
+                src={LOGO_URL}
+                width="40"
+                height="37"
+                alt="Minifi"
+                className="mx-auto my-0"
+              />
+            </Section>
 
-          <Text style={styles.intro}>{content.intro}</Text>
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+              {content.emoji} {content.title}
+            </Heading>
 
-          <Text style={styles.message}>{content.message}</Text>
+            <Text className="text-[14px] text-black leading-[24px]">
+              {content.intro}
+            </Text>
 
-          {content.features.length > 0 && (
-            <>
-              <Hr style={styles.divider} />
-              <Section style={styles.featuresSection}>
-                {action === 'upgraded' && (
-                  <Text style={styles.subheading}>What's included:</Text>
-                )}
-                {action === 'cancelled' && (
-                  <Text style={styles.subheading}>What happens next:</Text>
-                )}
+            <Text className="text-[14px] text-black leading-[24px]">
+              {content.message}
+            </Text>
+
+            {content.features.length > 0 && (
+              <>
+                <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+                <Text className="text-[14px] text-black leading-[24px] font-semibold">
+                  {action === 'upgraded'
+                    ? "What's included:"
+                    : 'What happens next:'}
+                </Text>
+
                 {content.features.map((feature, index) => (
-                  <Text key={index} style={styles.featureItem}>
+                  <Text
+                    key={index}
+                    className="text-[14px] text-black leading-[24px]"
+                  >
                     {feature}
                   </Text>
                 ))}
-              </Section>
-            </>
-          )}
-
-          <Hr style={styles.divider} />
-
-          <Section style={styles.ctaSection}>
-            <Link href={dashboardUrl} style={styles.ctaButton}>
-              {action === 'upgraded' ? 'Start Exploring' : 'Go to Dashboard'}
-            </Link>
-          </Section>
-
-          <Text style={styles.footer}>
-            {action === 'cancelled' && (
-              <>
-                Changed your mind?{' '}
-                <Link href={`${dashboardUrl}/settings/subscription`}>
-                  Resubscribe anytime
-                </Link>
-                .
-                <br />
               </>
             )}
-            Questions? Reply to this email and we'll help you out.
-          </Text>
-        </Container>
-      </Body>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section className="mt-[32px] mb-[32px] text-center">
+              <Button
+                className="rounded bg-blue-600 px-5 py-3 text-center font-semibold text-[12px] text-white no-underline"
+                href={dashboardUrl}
+              >
+                {action === 'upgraded' ? 'Start Exploring' : 'Go to Dashboard'}
+              </Button>
+            </Section>
+
+            <Text className="text-[14px] text-black leading-[24px]">
+              {action === 'cancelled' && (
+                <>
+                  Changed your mind?{' '}
+                  <Link
+                    href={`${dashboardUrl}/settings/subscription`}
+                    className="text-blue-600 no-underline"
+                  >
+                    Resubscribe anytime
+                  </Link>
+                  .{' '}
+                </>
+              )}
+              Questions? Reply to this email and we'll help you out.
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section>
+              <Img
+                src={LOGO_URL}
+                width="24"
+                height="24"
+                alt="Minifi"
+                className="my-0"
+              />
+              <Text className="text-[#666666] text-[12px] leading-[20px] mt-[16px]">
+                Minifi - Links made simple.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px] mt-[8px]">
+                © {new Date().getFullYear()} Minifi. All rights reserved.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px]">
+                <Link
+                  href="https://minifi.link"
+                  className="text-[#666666] underline"
+                >
+                  minifi.link
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/privacy"
+                  className="text-[#666666] underline"
+                >
+                  Privacy
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/terms"
+                  className="text-[#666666] underline"
+                >
+                  Terms
+                </Link>
+              </Text>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
 };
 
-const formatDate = (date: Date | string): string => {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
+SubscriptionEmailTemplate.PreviewProps = {
+  firstName: 'Alex',
+  action: 'upgraded',
+  tier: 'PRO',
+  periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  dashboardUrl: 'https://minifi.link/dashboard',
+} as SubscriptionEmailProps;
 
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  container: {
-    backgroundColor: '#ffffff',
-    margin: '40px auto',
-    padding: '40px',
-    borderRadius: '8px',
-    maxWidth: '600px',
-  },
-  heading: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-    textAlign: 'center' as const,
-  },
-  intro: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '16px',
-    lineHeight: '1.5',
-  },
-  message: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '20px',
-    lineHeight: '1.6',
-  },
-  subheading: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '12px',
-  },
-  featuresSection: {
-    marginBottom: '16px',
-  },
-  featureItem: {
-    fontSize: '15px',
-    color: '#4a5568',
-    marginBottom: '10px',
-    lineHeight: '1.5',
-  },
-  divider: {
-    borderColor: '#e2e8f0',
-    marginTop: '24px',
-    marginBottom: '24px',
-  },
-  ctaSection: {
-    textAlign: 'center' as const,
-    margin: '30px 0',
-  },
-  ctaButton: {
-    display: 'inline-block',
-    backgroundColor: '#3182ce',
-    color: '#ffffff',
-    fontSize: '16px',
-    fontWeight: '600',
-    padding: '14px 28px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#a0aec0',
-    marginTop: '20px',
-    textAlign: 'center' as const,
-    lineHeight: '1.6',
-  },
-};
+export default SubscriptionEmailTemplate;

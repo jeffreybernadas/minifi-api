@@ -1,17 +1,22 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
+  Tailwind,
   Text,
 } from '@react-email/components';
 import { WelcomeEmailProps } from '@/common/interfaces/email.interface';
 import * as React from 'react';
+
+const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 /**
  * Welcome Email Template
@@ -20,137 +25,127 @@ import * as React from 'react';
 export const WelcomeEmailTemplate = (props: WelcomeEmailProps) => {
   const { firstName, dashboardUrl } = props;
 
+  const previewText = 'Welcome to Minifi - Start shortening your links!';
+
   return (
     <Html>
       <Head />
-      <Preview>Welcome to Minifi - Start shortening your links!</Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.heading}>Welcome to Minifi! 🎉</Heading>
+      <Tailwind>
+        <Body className="mx-auto my-auto bg-white px-2 font-sans">
+          <Preview>{previewText}</Preview>
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+            <Section className="mt-[32px]">
+              <Img
+                src={LOGO_URL}
+                width="40"
+                height="37"
+                alt="Minifi"
+                className="mx-auto my-0"
+              />
+            </Section>
 
-          <Text style={styles.intro}>
-            {firstName ? `Hey ${firstName},` : 'Hey there,'} thanks for joining
-            Minifi! We're excited to have you on board.
-          </Text>
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+              Welcome to <strong>Minifi</strong>! 🎉
+            </Heading>
 
-          <Text style={styles.paragraph}>
-            Minifi helps you create short, memorable links that are easy to
-            share. Whether you're a marketer tracking campaigns or just want
-            cleaner URLs, we've got you covered.
-          </Text>
+            <Text className="text-[14px] text-black leading-[24px]">
+              {firstName ? `Hey ${firstName},` : 'Hey there,'} thanks for
+              joining Minifi! We're excited to have you on board.
+            </Text>
 
-          <Hr style={styles.divider} />
+            <Text className="text-[14px] text-black leading-[24px]">
+              Minifi helps you create short, memorable links that are easy to
+              share. Whether you're a marketer tracking campaigns or just want
+              cleaner URLs, we've got you covered.
+            </Text>
 
-          <Section style={styles.featuresSection}>
-            <Text style={styles.subheading}>What you can do:</Text>
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
 
-            <Text style={styles.featureItem}>
+            <Text className="text-[14px] text-black leading-[24px] font-semibold">
+              What you can do:
+            </Text>
+
+            <Text className="text-[14px] text-black leading-[24px]">
               🔗 <strong>Shorten URLs</strong> - Create clean, shareable links
             </Text>
-            <Text style={styles.featureItem}>
+            <Text className="text-[14px] text-black leading-[24px]">
               📊 <strong>Track Clicks</strong> - See who's clicking your links
             </Text>
-            <Text style={styles.featureItem}>
+            <Text className="text-[14px] text-black leading-[24px]">
               🏷️ <strong>Organize with Tags</strong> - Keep your links tidy
             </Text>
-            <Text style={styles.featureItem}>
+            <Text className="text-[14px] text-black leading-[24px]">
               🔒 <strong>Password Protection</strong> - Secure sensitive links
             </Text>
-            <Text style={styles.featureItem}>
+            <Text className="text-[14px] text-black leading-[24px]">
               ⏰ <strong>Schedule Links</strong> - Set start and end dates
             </Text>
-          </Section>
 
-          <Hr style={styles.divider} />
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
 
-          <Section style={styles.ctaSection}>
-            <Link href={dashboardUrl} style={styles.ctaButton}>
-              Go to Dashboard
-            </Link>
-          </Section>
+            <Section className="mt-[32px] mb-[32px] text-center">
+              <Button
+                className="rounded bg-blue-600 px-5 py-3 text-center font-semibold text-[12px] text-white no-underline"
+                href={dashboardUrl}
+              >
+                Go to Dashboard
+              </Button>
+            </Section>
 
-          <Text style={styles.footer}>
-            Need help? Reply to this email or check out our docs.
-            <br />
-            Happy linking! 🚀
-          </Text>
-        </Container>
-      </Body>
+            <Text className="text-[14px] text-black leading-[24px]">
+              Need help? Reply to this email or check out our docs. Happy
+              linking! 🚀
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section>
+              <Img
+                src={LOGO_URL}
+                width="24"
+                height="24"
+                alt="Minifi"
+                className="my-0"
+              />
+              <Text className="text-[#666666] text-[12px] leading-[20px] mt-[16px]">
+                Minifi - Links made simple.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px] mt-[8px]">
+                © {new Date().getFullYear()} Minifi. All rights reserved.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px]">
+                <Link
+                  href="https://minifi.link"
+                  className="text-[#666666] underline"
+                >
+                  minifi.link
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/privacy"
+                  className="text-[#666666] underline"
+                >
+                  Privacy
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/terms"
+                  className="text-[#666666] underline"
+                >
+                  Terms
+                </Link>
+              </Text>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
 };
 
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  container: {
-    backgroundColor: '#ffffff',
-    margin: '40px auto',
-    padding: '40px',
-    borderRadius: '8px',
-    maxWidth: '600px',
-  },
-  heading: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-    textAlign: 'center' as const,
-  },
-  intro: {
-    fontSize: '18px',
-    color: '#2d3748',
-    marginBottom: '16px',
-    lineHeight: '1.6',
-  },
-  paragraph: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '24px',
-    lineHeight: '1.6',
-  },
-  subheading: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '16px',
-  },
-  featuresSection: {
-    marginBottom: '16px',
-  },
-  featureItem: {
-    fontSize: '15px',
-    color: '#4a5568',
-    marginBottom: '12px',
-    lineHeight: '1.5',
-  },
-  divider: {
-    borderColor: '#e2e8f0',
-    marginTop: '24px',
-    marginBottom: '24px',
-  },
-  ctaSection: {
-    textAlign: 'center' as const,
-    margin: '30px 0',
-  },
-  ctaButton: {
-    display: 'inline-block',
-    backgroundColor: '#3182ce',
-    color: '#ffffff',
-    fontSize: '16px',
-    fontWeight: '600',
-    padding: '14px 28px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#a0aec0',
-    marginTop: '20px',
-    textAlign: 'center' as const,
-    lineHeight: '1.6',
-  },
-};
+WelcomeEmailTemplate.PreviewProps = {
+  firstName: 'Alex',
+  dashboardUrl: 'https://minifi.link/dashboard',
+} as WelcomeEmailProps;
+
+export default WelcomeEmailTemplate;

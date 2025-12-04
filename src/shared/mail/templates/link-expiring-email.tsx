@@ -1,17 +1,22 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
+  Tailwind,
   Text,
 } from '@react-email/components';
 import { LinkExpiringEmailProps } from '@/common/interfaces/email.interface';
 import * as React from 'react';
+
+const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 /**
  * Link Expiring Email Template
@@ -20,146 +25,151 @@ import * as React from 'react';
 export const LinkExpiringEmailTemplate = (props: LinkExpiringEmailProps) => {
   const { expiringLinks, totalCount, dashboardUrl } = props;
 
+  const previewText = `${totalCount?.toString() || '1'} link${totalCount && totalCount > 1 ? 's' : ''} expiring soon`;
+
   return (
     <Html>
       <Head />
-      <Preview>
-        ⏰ {totalCount.toString()} link{totalCount > 1 ? 's' : ''} expiring soon
-      </Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.heading}>
-            ⏰ Your Links Are Expiring Soon
-          </Heading>
-
-          <Text style={styles.intro}>
-            {totalCount === 1
-              ? 'One of your shortened links is about to expire.'
-              : `${totalCount} of your shortened links are about to expire.`}{' '}
-            Renew them from your dashboard to keep them active.
-          </Text>
-
-          {expiringLinks.map((link, index) => (
-            <Section key={link.shortCode} style={styles.linkSection}>
-              <Text style={styles.linkTitle}>
-                {link.title || link.shortCode}
-                <span style={styles.expiryBadge}>
-                  {link.daysRemaining === 0
-                    ? 'Expires today'
-                    : link.daysRemaining === 1
-                      ? 'Expires tomorrow'
-                      : `${link.daysRemaining} days left`}
-                </span>
-              </Text>
-
-              <Text style={styles.shortCode}>minifi.link/{link.shortCode}</Text>
-
-              <Text style={styles.originalUrl}>{link.originalUrl}</Text>
-
-              {index < expiringLinks.length - 1 && (
-                <Hr style={styles.divider} />
-              )}
+      <Tailwind>
+        <Body className="mx-auto my-auto bg-white px-2 font-sans">
+          <Preview>{previewText}</Preview>
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+            <Section className="mt-[32px]">
+              <Img
+                src={LOGO_URL}
+                width="40"
+                height="37"
+                alt="Minifi"
+                className="mx-auto my-0"
+              />
             </Section>
-          ))}
 
-          <Hr style={styles.divider} />
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+              Your Links Are Expiring Soon
+            </Heading>
 
-          <Section style={styles.ctaSection}>
-            <Link href={dashboardUrl} style={styles.ctaButton}>
-              View Dashboard
-            </Link>
-          </Section>
+            <Text className="text-[14px] text-black leading-[24px]">
+              {totalCount === 1
+                ? 'One of your shortened links is about to expire.'
+                : `${totalCount || 0} of your shortened links are about to expire.`}{' '}
+              Extend them from your dashboard to keep them active.
+            </Text>
 
-          <Text style={styles.footer}>
-            Links that expire will no longer redirect visitors. You can extend
-            the expiration date or create new links from your dashboard.
-          </Text>
-        </Container>
-      </Body>
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            {expiringLinks && expiringLinks.length > 0 ? (
+              expiringLinks.map((link, index) => (
+                <Section key={link.shortCode} className="mb-[20px]">
+                  <Text className="text-[16px] text-black leading-[24px] font-semibold m-0">
+                    {link.title || link.shortCode}
+                    <span className="inline-block ml-[12px] text-[12px] font-medium text-white bg-amber-500 px-[12px] py-[4px] rounded-full">
+                      {link.daysRemaining === 0
+                        ? 'Expires today'
+                        : link.daysRemaining === 1
+                          ? 'Expires tomorrow'
+                          : `${link.daysRemaining} days left`}
+                    </span>
+                  </Text>
+
+                  <Text className="text-[14px] text-blue-600 font-medium m-0 mt-[4px]">
+                    minifi.link/{link.shortCode}
+                  </Text>
+
+                  <Text className="text-[14px] text-[#666666] leading-[24px] break-all m-0 mt-[4px]">
+                    {link.originalUrl}
+                  </Text>
+
+                  {index < (expiringLinks?.length || 0) - 1 && (
+                    <Hr className="mx-0 my-[20px] w-full border border-[#eaeaea] border-solid" />
+                  )}
+                </Section>
+              ))
+            ) : (
+              <Text className="text-[14px] text-black leading-[24px]">
+                No links expiring soon.
+              </Text>
+            )}
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section className="mt-[32px] mb-[32px] text-center">
+              <Button
+                className="rounded bg-blue-600 px-5 py-3 text-center font-semibold text-[12px] text-white no-underline"
+                href={dashboardUrl}
+              >
+                View Dashboard
+              </Button>
+            </Section>
+
+            <Text className="text-[14px] text-black leading-[24px]">
+              Links that expire will no longer redirect visitors. You can extend
+              the expiration date or create new links from your dashboard.
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section>
+              <Img
+                src={LOGO_URL}
+                width="24"
+                height="24"
+                alt="Minifi"
+                className="my-0"
+              />
+              <Text className="text-[#666666] text-[12px] leading-[20px] mt-[16px]">
+                Minifi - Links made simple.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px] mt-[8px]">
+                © {new Date().getFullYear()} Minifi. All rights reserved.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px]">
+                <Link
+                  href="https://minifi.link"
+                  className="text-[#666666] underline"
+                >
+                  minifi.link
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/privacy"
+                  className="text-[#666666] underline"
+                >
+                  Privacy
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/terms"
+                  className="text-[#666666] underline"
+                >
+                  Terms
+                </Link>
+              </Text>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
 };
 
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  container: {
-    backgroundColor: '#ffffff',
-    margin: '40px auto',
-    padding: '40px',
-    borderRadius: '8px',
-    maxWidth: '600px',
-  },
-  heading: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-  },
-  intro: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '30px',
-    lineHeight: '1.5',
-  },
-  linkSection: {
-    marginBottom: '20px',
-  },
-  linkTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '8px',
-  },
-  expiryBadge: {
-    display: 'inline-block',
-    marginLeft: '12px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#ffffff',
-    backgroundColor: '#dd6b20',
-    padding: '4px 12px',
-    borderRadius: '12px',
-  },
-  shortCode: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#3182ce',
-    marginBottom: '4px',
-  },
-  originalUrl: {
-    fontSize: '14px',
-    color: '#718096',
-    wordBreak: 'break-all' as const,
-    lineHeight: '1.5',
-  },
-  divider: {
-    borderColor: '#e2e8f0',
-    marginTop: '20px',
-    marginBottom: '20px',
-  },
-  ctaSection: {
-    textAlign: 'center' as const,
-    margin: '30px 0',
-  },
-  ctaButton: {
-    display: 'inline-block',
-    backgroundColor: '#3182ce',
-    color: '#ffffff',
-    fontSize: '16px',
-    fontWeight: '600',
-    padding: '12px 24px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#a0aec0',
-    marginTop: '20px',
-    textAlign: 'center' as const,
-    lineHeight: '1.5',
-  },
-};
+LinkExpiringEmailTemplate.PreviewProps = {
+  expiringLinks: [
+    {
+      shortCode: 'abc1234',
+      title: 'Product Launch Link',
+      originalUrl: 'https://example.com/product/launch',
+      expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      daysRemaining: 2,
+    },
+    {
+      shortCode: 'xyz5678',
+      originalUrl: 'https://another-example.com/page',
+      expiresAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      daysRemaining: 1,
+    },
+  ],
+  totalCount: 2,
+  dashboardUrl: 'https://minifi.link/dashboard/links',
+} as LinkExpiringEmailProps;
+
+export default LinkExpiringEmailTemplate;

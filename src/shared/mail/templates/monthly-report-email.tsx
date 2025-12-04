@@ -1,17 +1,22 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
+  Tailwind,
   Text,
 } from '@react-email/components';
 import { MonthlyReportEmailProps } from '@/common/interfaces/email.interface';
 import * as React from 'react';
+
+const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 /**
  * Monthly Report Email Template
@@ -35,6 +40,8 @@ export const MonthlyReportEmailTemplate = (props: MonthlyReportEmailProps) => {
     dashboardUrl,
   } = props;
 
+  const previewText = `Your Minifi Report for ${month || 'Month'} ${year?.toString() || new Date().getFullYear().toString()}`;
+
   const formatGrowth = (growth?: number) => {
     if (growth === undefined) return null;
     if (growth === 0) return '0%';
@@ -44,135 +51,165 @@ export const MonthlyReportEmailTemplate = (props: MonthlyReportEmailProps) => {
 
   const growthColor =
     growthPercentage !== undefined && growthPercentage > 0
-      ? '#38a169'
+      ? 'text-green-600'
       : growthPercentage !== undefined && growthPercentage < 0
-        ? '#e53e3e'
-        : '#718096';
+        ? 'text-red-600'
+        : 'text-[#666666]';
 
   return (
     <Html>
       <Head />
-      <Preview>
-        Your Minifi Report for {month} {year.toString()}
-      </Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.heading}>
-            📊 Your {month} {year} Report
-          </Heading>
-
-          <Text style={styles.intro}>
-            {firstName ? `Hey ${firstName},` : 'Hey there,'} here's how your
-            links performed last month.
-          </Text>
-
-          <Hr style={styles.divider} />
-
-          {/* Summary Stats */}
-          <Section style={styles.statsGrid}>
-            <table style={styles.statsTable}>
-              <tbody>
-                <tr>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>
-                      {totalClicks.toLocaleString()}
-                    </Text>
-                    <Text style={styles.statLabel}>Total Clicks</Text>
-                  </td>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>
-                      {uniqueVisitors.toLocaleString()}
-                    </Text>
-                    <Text style={styles.statLabel}>Unique Visitors</Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>{totalActiveLinks}</Text>
-                    <Text style={styles.statLabel}>Active Links</Text>
-                  </td>
-                  <td style={styles.statCell}>
-                    <Text style={styles.statValue}>
-                      {linksCreatedThisMonth}
-                    </Text>
-                    <Text style={styles.statLabel}>New Links</Text>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Section>
-
-          {/* Growth Indicator */}
-          {growthPercentage !== undefined && (
-            <Section style={styles.growthSection}>
-              <Text style={{ ...styles.growthText, color: growthColor }}>
-                {formatGrowth(growthPercentage)} vs last month
-              </Text>
+      <Tailwind>
+        <Body className="mx-auto my-auto bg-white px-2 font-sans">
+          <Preview>{previewText}</Preview>
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+            <Section className="mt-[32px]">
+              <Img
+                src={LOGO_URL}
+                width="40"
+                height="37"
+                alt="Minifi"
+                className="mx-auto my-0"
+              />
             </Section>
-          )}
 
-          {/* Best Day */}
-          {bestDay && (
-            <Section style={styles.bestDaySection}>
-              <Text style={styles.bestDayText}>
-                🏆 Best day: <strong>{bestDay.date}</strong> with{' '}
-                <strong>{bestDay.clicks.toLocaleString()}</strong> clicks
-              </Text>
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+              Your {month || 'Month'} {year || new Date().getFullYear()} Report
+            </Heading>
+
+            <Text className="text-[14px] text-black leading-[24px]">
+              {firstName ? `Hey ${firstName},` : 'Hey there,'} here's how your
+              links performed last month.
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            {/* Summary Stats */}
+            <Section className="my-[20px]">
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {totalClicks?.toLocaleString() || '0'}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        Total Clicks
+                      </Text>
+                    </td>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {uniqueVisitors?.toLocaleString() || '0'}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        Unique Visitors
+                      </Text>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {totalActiveLinks || 0}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        Active Links
+                      </Text>
+                    </td>
+                    <td className="text-center p-[16px] bg-[#f7fafc] rounded-lg w-1/2">
+                      <Text className="text-[24px] font-bold text-blue-600 mb-[4px]">
+                        {linksCreatedThisMonth || 0}
+                      </Text>
+                      <Text className="text-[12px] text-[#666666] uppercase tracking-wide">
+                        New Links
+                      </Text>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </Section>
-          )}
 
-          <Hr style={styles.divider} />
+            {/* Growth Indicator */}
+            {growthPercentage !== undefined && (
+              <Section className="text-center mt-[12px]">
+                <Text className={`text-[16px] font-semibold ${growthColor}`}>
+                  {formatGrowth(growthPercentage)} vs last month
+                </Text>
+              </Section>
+            )}
 
-          {/* Top Links */}
-          {topLinks.length > 0 && (
-            <Section style={styles.section}>
-              <Text style={styles.sectionTitle}>🔗 Top Performing Links</Text>
-              {topLinks.slice(0, 5).map((link, index) => (
-                <Section key={link.shortCode} style={styles.linkRow}>
-                  <Text style={styles.linkRank}>#{index + 1}</Text>
-                  <Section style={styles.linkInfo}>
-                    <Text style={styles.linkTitle}>
+            {/* Best Day */}
+            {bestDay && (
+              <Section className="text-center mt-[16px] bg-amber-50 p-[12px] rounded-lg">
+                <Text className="text-[14px] text-amber-800 m-0">
+                  🏆 Best day: <strong>{bestDay.date || 'N/A'}</strong> with{' '}
+                  <strong>{bestDay.clicks?.toLocaleString() || '0'}</strong>{' '}
+                  clicks
+                </Text>
+              </Section>
+            )}
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            {/* Top Links */}
+            {topLinks && topLinks.length > 0 && (
+              <Section className="mb-[16px]">
+                <Text className="text-[14px] text-black leading-[24px] font-semibold">
+                  🔗 Top Performing Links
+                </Text>
+                {topLinks.slice(0, 5).map((link, index) => (
+                  <Section
+                    key={link.shortCode}
+                    className="py-[10px] border-b border-[#eaeaea]"
+                  >
+                    <Text className="text-[14px] text-blue-600 font-bold m-0">
+                      #{index + 1}
+                    </Text>
+                    <Text className="text-[14px] text-black font-semibold m-0">
                       {link.title || link.shortCode}
                     </Text>
-                    <Text style={styles.linkCode}>
-                      minifi.link/{link.shortCode}
+                    <Text className="text-[12px] text-[#666666] m-0">
+                      minifi.link/{link.shortCode} •{' '}
+                      {link.clicks?.toLocaleString() || '0'} clicks
                     </Text>
                   </Section>
-                  <Text style={styles.linkClicks}>
-                    {link.clicks.toLocaleString()}
+                ))}
+              </Section>
+            )}
+
+            {/* Top Countries */}
+            {topCountries && topCountries.length > 0 && (
+              <>
+                <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+                <Section className="mb-[16px]">
+                  <Text className="text-[14px] text-black leading-[24px] font-semibold">
+                    🌍 Top Countries
+                  </Text>
+                  <Text className="text-[14px] text-black leading-[24px]">
+                    {topCountries
+                      .slice(0, 5)
+                      .map(
+                        (c) =>
+                          `${c.country || 'Unknown'} (${c.clicks?.toLocaleString() || '0'})`,
+                      )
+                      .join(' • ')}
                   </Text>
                 </Section>
-              ))}
-            </Section>
-          )}
+              </>
+            )}
 
-          {/* Top Countries */}
-          {topCountries.length > 0 && (
-            <>
-              <Hr style={styles.divider} />
-              <Section style={styles.section}>
-                <Text style={styles.sectionTitle}>🌍 Top Countries</Text>
-                <Section style={styles.inlineList}>
-                  {topCountries.slice(0, 5).map((c, i) => (
-                    <Text key={c.country} style={styles.inlineItem}>
-                      {c.country} ({c.clicks.toLocaleString()})
-                      {i < topCountries.length - 1 && i < 4 ? ' • ' : ''}
-                    </Text>
-                  ))}
-                </Section>
-              </Section>
-            </>
-          )}
-
-          {/* Device Breakdown */}
-          {topDevices.length > 0 && (
-            <>
-              <Hr style={styles.divider} />
-              <Section style={styles.section}>
-                <Text style={styles.sectionTitle}>📱 Device Breakdown</Text>
-                <Section style={styles.deviceGrid}>
+            {/* Device Breakdown */}
+            {topDevices && topDevices.length > 0 && (
+              <>
+                <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+                <Section className="mb-[16px]">
+                  <Text className="text-[14px] text-black leading-[24px] font-semibold">
+                    📱 Device Breakdown
+                  </Text>
                   {topDevices.map((d) => (
-                    <Text key={d.device} style={styles.deviceItem}>
+                    <Text
+                      key={d.device}
+                      className="text-[14px] text-black leading-[24px]"
+                    >
                       {d.device === 'mobile'
                         ? '📱'
                         : d.device === 'tablet'
@@ -183,219 +220,142 @@ export const MonthlyReportEmailTemplate = (props: MonthlyReportEmailProps) => {
                     </Text>
                   ))}
                 </Section>
-              </Section>
-            </>
-          )}
+              </>
+            )}
 
-          {/* Top Referrers */}
-          {topReferrers.length > 0 && (
-            <>
-              <Hr style={styles.divider} />
-              <Section style={styles.section}>
-                <Text style={styles.sectionTitle}>🔀 Top Traffic Sources</Text>
-                <Section style={styles.inlineList}>
-                  {topReferrers.slice(0, 5).map((r, i) => (
-                    <Text key={r.referrer} style={styles.inlineItem}>
-                      {r.referrer} ({r.clicks.toLocaleString()})
-                      {i < topReferrers.length - 1 && i < 4 ? ' • ' : ''}
-                    </Text>
-                  ))}
+            {/* Top Referrers */}
+            {topReferrers && topReferrers.length > 0 && (
+              <>
+                <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+                <Section className="mb-[16px]">
+                  <Text className="text-[14px] text-black leading-[24px] font-semibold">
+                    🔀 Top Traffic Sources
+                  </Text>
+                  <Text className="text-[14px] text-black leading-[24px]">
+                    {topReferrers
+                      .slice(0, 5)
+                      .map(
+                        (r) => `${r.referrer} (${r.clicks.toLocaleString()})`,
+                      )
+                      .join(' • ')}
+                  </Text>
                 </Section>
-              </Section>
-            </>
-          )}
+              </>
+            )}
 
-          {/* Empty State */}
-          {topLinks.length === 0 && (
-            <Section style={styles.emptySection}>
-              <Text style={styles.emptyText}>
-                No link activity this month. Create some links to start
-                tracking!
+            {/* Empty State */}
+            {(!topLinks || topLinks.length === 0) && (
+              <Section className="text-center py-[30px]">
+                <Text className="text-[15px] text-[#666666]">
+                  No link activity this month. Create some links to start
+                  tracking!
+                </Text>
+              </Section>
+            )}
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section className="mt-[32px] mb-[32px] text-center">
+              <Button
+                className="rounded bg-blue-600 px-5 py-3 text-center font-semibold text-[12px] text-white no-underline"
+                href={dashboardUrl}
+              >
+                View Full Analytics
+              </Button>
+            </Section>
+
+            <Text className="text-[14px] text-black leading-[24px]">
+              This report is sent monthly to PRO subscribers. Manage your email
+              preferences in your dashboard settings.
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section>
+              <Img
+                src={LOGO_URL}
+                width="24"
+                height="24"
+                alt="Minifi"
+                className="my-0"
+              />
+              <Text className="text-[#666666] text-[12px] leading-[20px] mt-[16px]">
+                Minifi - Links made simple.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px] mt-[8px]">
+                © {new Date().getFullYear()} Minifi. All rights reserved.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px]">
+                <Link
+                  href="https://minifi.link"
+                  className="text-[#666666] underline"
+                >
+                  minifi.link
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/privacy"
+                  className="text-[#666666] underline"
+                >
+                  Privacy
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href="https://minifi.link/terms"
+                  className="text-[#666666] underline"
+                >
+                  Terms
+                </Link>
               </Text>
             </Section>
-          )}
-
-          <Hr style={styles.divider} />
-
-          <Section style={styles.ctaSection}>
-            <Link href={dashboardUrl} style={styles.ctaButton}>
-              View Full Analytics
-            </Link>
-          </Section>
-
-          <Text style={styles.footer}>
-            This report is sent monthly to PRO subscribers.
-            <br />
-            Manage your email preferences in your dashboard settings.
-          </Text>
-        </Container>
-      </Body>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
 };
 
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  container: {
-    backgroundColor: '#ffffff',
-    margin: '40px auto',
-    padding: '40px',
-    borderRadius: '8px',
-    maxWidth: '600px',
-  },
-  heading: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-    textAlign: 'center' as const,
-  },
-  intro: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '20px',
-    lineHeight: '1.5',
-  },
-  statsGrid: {
-    margin: '20px 0',
-  },
-  statsTable: {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-  },
-  statCell: {
-    textAlign: 'center' as const,
-    padding: '16px 8px',
-    backgroundColor: '#f7fafc',
-    borderRadius: '8px',
-    width: '50%',
-  },
-  statValue: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#3182ce',
-    marginBottom: '4px',
-  },
-  statLabel: {
-    fontSize: '12px',
-    color: '#718096',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-  },
-  growthSection: {
-    textAlign: 'center' as const,
-    marginTop: '12px',
-  },
-  growthText: {
-    fontSize: '16px',
-    fontWeight: '600',
-  },
-  bestDaySection: {
-    textAlign: 'center' as const,
-    marginTop: '16px',
-    backgroundColor: '#fffaf0',
-    padding: '12px',
-    borderRadius: '8px',
-  },
-  bestDayText: {
-    fontSize: '14px',
-    color: '#744210',
-    margin: 0,
-  },
-  section: {
-    marginBottom: '16px',
-  },
-  sectionTitle: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '12px',
-  },
-  linkRow: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '10px 0',
-    borderBottom: '1px solid #e2e8f0',
-  },
-  linkRank: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#3182ce',
-    width: '30px',
-    margin: 0,
-  },
-  linkInfo: {
-    flex: '1',
-  },
-  linkTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '2px',
-  },
-  linkCode: {
-    fontSize: '12px',
-    color: '#718096',
-  },
-  linkClicks: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#2d3748',
-    margin: 0,
-  },
-  inlineList: {
-    lineHeight: '1.8',
-  },
-  inlineItem: {
-    fontSize: '14px',
-    color: '#4a5568',
-    display: 'inline',
-  },
-  deviceGrid: {
-    display: 'flex',
-    gap: '16px',
-  },
-  deviceItem: {
-    fontSize: '14px',
-    color: '#4a5568',
-    marginBottom: '4px',
-  },
-  emptySection: {
-    textAlign: 'center' as const,
-    padding: '30px',
-  },
-  emptyText: {
-    fontSize: '15px',
-    color: '#718096',
-  },
-  divider: {
-    borderColor: '#e2e8f0',
-    marginTop: '24px',
-    marginBottom: '24px',
-  },
-  ctaSection: {
-    textAlign: 'center' as const,
-    margin: '30px 0',
-  },
-  ctaButton: {
-    display: 'inline-block',
-    backgroundColor: '#3182ce',
-    color: '#ffffff',
-    fontSize: '16px',
-    fontWeight: '600',
-    padding: '12px 24px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#a0aec0',
-    marginTop: '20px',
-    textAlign: 'center' as const,
-    lineHeight: '1.6',
-  },
-};
+MonthlyReportEmailTemplate.PreviewProps = {
+  firstName: 'Sarah',
+  month: 'November',
+  year: 2025,
+  totalClicks: 5432,
+  uniqueVisitors: 3210,
+  totalActiveLinks: 25,
+  linksCreatedThisMonth: 8,
+  growthPercentage: 15,
+  topLinks: [
+    {
+      shortCode: 'abc1234',
+      title: 'Product Launch',
+      clicks: 1234,
+      uniqueClicks: 856,
+    },
+    {
+      shortCode: 'xyz5678',
+      title: 'Blog Post',
+      clicks: 890,
+      uniqueClicks: 654,
+    },
+    { shortCode: 'def9012', clicks: 567, uniqueClicks: 432 },
+  ],
+  topCountries: [
+    { country: 'United States', clicks: 2345 },
+    { country: 'United Kingdom', clicks: 1234 },
+    { country: 'Canada', clicks: 567 },
+  ],
+  topDevices: [
+    { device: 'mobile', clicks: 3200, percentage: 59 },
+    { device: 'desktop', clicks: 1800, percentage: 33 },
+    { device: 'tablet', clicks: 432, percentage: 8 },
+  ],
+  topReferrers: [
+    { referrer: 'Twitter', clicks: 1234 },
+    { referrer: 'Direct', clicks: 890 },
+    { referrer: 'Email', clicks: 567 },
+  ],
+  bestDay: { date: 'November 15', clicks: 456 },
+  dashboardUrl: 'https://minifi.link/dashboard/analytics',
+} as MonthlyReportEmailProps;
+
+export default MonthlyReportEmailTemplate;
