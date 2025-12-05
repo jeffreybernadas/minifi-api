@@ -5,6 +5,7 @@ import {
   IsArray,
   IsOptional,
   ArrayMaxSize,
+  MaxLength,
 } from 'class-validator';
 import { ChatType } from '@/generated/prisma/client';
 
@@ -21,9 +22,11 @@ export class CreateChatDto {
     description: 'Chat name (optional, not used for DIRECT chats with admin)',
     example: 'Support Chat',
     required: false,
+    maxLength: 100,
   })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   name?: string;
 
   @ApiProperty({

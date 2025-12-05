@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -203,6 +204,7 @@ export class AdminEditLinkDto {
 export class BlockLinkDto {
   @ApiProperty({ description: 'Reason for blocking the link' })
   @IsString()
+  @IsNotEmpty({ message: 'Block reason is required' })
   @MaxLength(500)
   reason: string;
 }

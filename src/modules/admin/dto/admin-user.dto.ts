@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -115,6 +116,7 @@ export class ChangeTierDto {
 export class BlockUserDto {
   @ApiProperty({ description: 'Reason for blocking the user' })
   @IsString()
+  @IsNotEmpty({ message: 'Block reason is required' })
   @MaxLength(500)
   reason: string;
 }
