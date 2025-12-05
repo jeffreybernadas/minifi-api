@@ -11,7 +11,7 @@ import { ExpiringLinkData } from '@/common/interfaces/email.interface';
 
 /**
  * Link Expiring Notification Cron Job
- * Runs daily at 9 AM UTC to warn users about expiring links
+ * Runs daily at 9 AM PHT to warn users about expiring links
  */
 @Injectable()
 export class LinkExpiringNotificationCron {
@@ -23,12 +23,12 @@ export class LinkExpiringNotificationCron {
   ) {}
 
   /**
-   * Daily at 9 AM UTC - Send expiring link warnings
+   * Daily at 9 AM PHT - Send expiring link warnings
    * Finds links expiring in the next 3 days and notifies their owners
    */
   @Cron('0 9 * * *', {
     name: 'link-expiring-notification',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Manila',
   })
   async sendExpiringLinkNotifications(): Promise<void> {
     this.logger.log(

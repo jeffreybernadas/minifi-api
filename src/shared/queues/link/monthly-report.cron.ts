@@ -11,7 +11,7 @@ import { LinkService } from '@/modules/link/link.service';
 
 /**
  * Monthly Report Cron Job
- * Runs on the 1st of each month at 10 AM UTC
+ * Runs on the 1st of each month at 9 AM PHT
  * - PRO users: Detailed analytics report
  * - FREE users: Basic stats with upgrade CTA
  */
@@ -26,11 +26,11 @@ export class MonthlyReportCron {
   ) {}
 
   /**
-   * Monthly report - 1st of each month at 10 AM UTC
+   * Monthly report - 1st of each month at 9 AM PHT
    */
-  @Cron('0 10 1 * *', {
+  @Cron('0 9 1 * *', {
     name: 'monthly-report',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Manila',
   })
   async sendMonthlyReports(): Promise<void> {
     this.logger.log('Monthly report cron started', 'MonthlyReportCron', {

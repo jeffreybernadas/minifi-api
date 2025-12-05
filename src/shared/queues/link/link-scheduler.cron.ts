@@ -60,7 +60,10 @@ export class LinkSchedulerCron {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  @Cron('0 3 * * *', {
+    name: 'delete-expired-guest-links',
+    timeZone: 'Asia/Manila',
+  })
   async deleteExpiredGuestLinks(): Promise<void> {
     const now = new Date();
     const result = await this.prisma.link.deleteMany({
@@ -80,7 +83,10 @@ export class LinkSchedulerCron {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  @Cron('0 3 * * *', {
+    name: 'delete-old-free-links',
+    timeZone: 'Asia/Manila',
+  })
   async deleteOldFreeLinks(): Promise<void> {
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
@@ -105,12 +111,12 @@ export class LinkSchedulerCron {
   }
 
   /**
-   * Daily at 9 AM UTC - Warn FREE users about links being deleted in 7 days
+   * Daily at 9 AM PHT - Warn FREE users about links being deleted in 7 days
    * Finds links created 83-89 days ago (will be deleted at 90 days)
    */
   @Cron('0 9 * * *', {
     name: 'free-link-deletion-warning',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Manila',
   })
   async sendFreeLinkDeletionWarnings(): Promise<void> {
     this.logger.log(
