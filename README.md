@@ -41,7 +41,7 @@
 
 ## 📋 Prerequisites
 
-- Node.js 20+
+- Node.js 24 LTS+
 - PostgreSQL
 - Redis
 - RabbitMQ
@@ -204,6 +204,252 @@ src/
 | Custom aliases | ❌ | ❌ | ✅ |
 | Analytics | ❌ | Basic | Full |
 | Email notifications | ❌ | ✅ | ✅ |
+
+---
+
+## 📐 Development Guidelines
+
+### Utilities
+
+| Utility | Location |
+|---------|----------|
+| LoggerService | `src/shared/logger/logger.service.ts` |
+| Response Interceptor | `src/interceptors/transform-response.interceptor.ts` |
+| Exception Filter | `src/filters/exceptions.filter.ts` |
+| Swagger Decorators | `src/decorators/swagger.decorator.ts` |
+| Pagination Utils | `src/utils/pagination/prisma-pagination.util.ts` |
+| Password Utils | `src/utils/password/password.util.ts` |
+| Short Code Generator | `src/utils/shortcode/shortcode.util.ts` |
+| QR Code Generator | `src/utils/qrcode/qrcode.util.ts` |
+| MinIO Storage | `src/shared/storage/minio.service.ts` |
+| Email Service | `src/shared/mail/resend.service.ts` |
+
+### Response Format
+
+The interceptor automatically wraps all responses:
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "path": "/api/v1/links",
+  "timestamp": "2025-11-29T12:00:00.000Z",
+  "data": { },
+  "meta": { }
+}
+```
+
+### Path Aliases
+
+```typescript
+import { LoggerService } from '@/shared/logger/logger.service';
+```
+
+---
+
+## 🏛️ Architecture Overview
+
+### Dual Process Pattern
+
+- **Main Application** (`main.ts`) - HTTP REST API + WebSocket
+- **Worker Process** (`main.worker.ts`) - RabbitMQ consumers + Cron jobs
+
+---
+
+## 🔧 Existing Infrastructure
+
+### Logging
+
+```typescript
+constructor(private readonly logger: LoggerService) {}
+
+this.logger.log('Message', 'ContextName', { meta });
+this.logger.warn('Warning', 'ContextName', { details });
+this.logger.error('Error', 'ContextName', error?.stack);
+```
+
+### Pagination
+
+**Offset (for standard lists):**
+
+```typescript
+import { offsetPaginateWithPrisma } from '@/utils/pagination/prisma-pagination.util';
+
+return offsetPaginateWithPrisma(this.prisma.link, pageOptions, {
+  where: { userId },
+  orderBy: { createdAt: 'desc' },
+});
+```
+
+**Cursor (for real-time feeds):**
+
+```typescript
+import { cursorPaginateWithPrisma } from '@/utils/pagination/prisma-pagination.util';
+
+return cursorPaginateWithPrisma(this.prisma.message, pageOptions, {
+  where: { chatId },
+}, 'id');
+```
+
+### Swagger Decorators
+
+```typescript
+import {
+  ApiStandardResponse,
+  ApiStandardErrorResponse,
+  ApiPaginatedResponse,
+} from '@/decorators/swagger.decorator';
+
+@ApiStandardResponse({ status: 200, type: LinkResponseDto })
+@ApiStandardErrorResponse({ status: 404, errorCode: 'NOT_FOUND' })
+@ApiPaginatedResponse(LinkResponseDto)
+```
+
+### Guards
+
+| Guard | Purpose |
+|-------|---------|
+| Keycloak AuthGuard | JWT validation (global) |
+| AdminGuard | Admin/superadmin role check |
+| ProTierGuard | PRO subscription check |
+| UsageLimitGuard | FREE tier link cap (25) |
+| SubscriptionTierGuard | PRO-only features (custom alias) |
+
+```typescript
+@Public()  // Skip auth
+@UseGuards(AdminGuard)  // Require admin role
+@UseGuards(ProTierGuard)  // Require PRO tier
+```
+
+---
+
+## 📝 Code Patterns
+
+### Controller Pattern
+
+```typescript
+@ApiTags('feature')
+@ApiBearerAuth('JWT')
+@Controller({ path: 'feature', version: '1' })
+export class FeatureController {
+  constructor(
+    private readonly service: FeatureService,
+    private readonly logger: LoggerService,
+  ) {}
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get item' })
+  @ApiStandardResponse({ status: 200, type: ResponseDto })
+  @ApiStandardErrorResponse({ status: 404, errorCode: 'NOT_FOUND' })
+  async getItem(@Param('id') id: string): Promise<ResponseDto> {
+    return this.service.getItem(id);
+  }
+}
+```
+
+### Service Pattern
+
+```typescript
+@Injectable()
+export class FeatureService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly logger: LoggerService,
+  ) {}
+
+  async getItem(id: string): Promise<ResponseDto> {
+    const item = await this.prisma.item.findUnique({ where: { id } });
+    if (!item) throw new NotFoundException('Item not found');
+    return item;
+  }
+}
+```
+
+### DTO Pattern
+
+```typescript
+// Request DTO
+export class CreateItemDto {
+  @ApiProperty()
+  @IsUrl()
+  url: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+}
+
+// Filter DTO (extends pagination)
+export class ItemFilterDto extends OffsetPageOptionsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEnum(ItemStatus)
+  status?: ItemStatus;
+}
+```
+
+---
+
+## 📊 Endpoints Summary
+
+| Module | Count | Description |
+|--------|-------|-------------|
+| Health | 1 | Health check |
+| User | 2 | Profile management |
+| Link | 12 | URL shortening & management |
+| Redirect | 2 | Public redirect & password verify |
+| Tags | 6 | Tag CRUD & assignment |
+| Subscription | 5 | Stripe integration |
+| File Upload | 2 | Single & multiple uploads |
+| Chat | 7 | PRO-to-admin messaging |
+| Admin | 16 | Platform management |
+| **Total** | **53** | |
+
+---
+
+## ⏰ Cron Jobs
+
+All scheduled jobs run in **Philippine Time (Asia/Manila)**.
+
+| Job | Schedule (PHT) | Purpose |
+|-----|----------------|---------|
+| activateScheduledLinks | Every hour | SCHEDULED → ACTIVE |
+| disableExpiredLinks | Every hour | Expire old links |
+| deleteExpiredGuestLinks | Daily 3 AM | Clean guest links (3 days) |
+| deleteOldFreeLinks | Daily 3 AM | Clean FREE links (90 days) |
+| sendFreeLinkDeletionWarnings | Daily 9 AM | Warn FREE users 7 days before |
+| sendExpiringLinkNotifications | Daily 9 AM | Warn links expiring in 3 days |
+| sendMonthlyReports | 1st of month 9 AM | Monthly stats to PRO + FREE |
+| handleUnreadDigest | Daily 8 PM | Chat unread digest |
+
+---
+
+## 📬 Queue Consumers
+
+| Consumer | Queue | Purpose |
+|----------|-------|---------|
+| EmailConsumer | `email.send` | Send emails via Resend |
+| ScanConsumer | `scan.url` | OpenAI URL security scan |
+
+---
+
+## 📧 Email Templates
+
+| Trigger | Template |
+|---------|----------|
+| New user | `welcome-email` |
+| PRO upgrade | `subscription-email` |
+| Subscription cancel | `subscription-email` |
+| Security threat | `security-alert-email` |
+| Link expiring | `link-expiring-email` |
+| FREE link deletion | `link-deletion-warning-email` |
+| Monthly report (PRO) | `monthly-report-email` |
+| Monthly report (FREE) | `free-monthly-report-email` |
+| Chat unread digest | `chat-unread-digest` |
+
+---
 
 ## 📄 License
 
