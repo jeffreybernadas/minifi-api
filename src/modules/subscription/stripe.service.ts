@@ -186,10 +186,6 @@ export class StripeService {
     stripeSubscriptionId: string,
   ): Promise<void> {
     await this.stripe.subscriptions.cancel(stripeSubscriptionId);
-    this.logger.log(
-      `Immediately cancelled Stripe subscription: ${stripeSubscriptionId}`,
-      'StripeService',
-    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -246,10 +242,6 @@ export class StripeService {
    * @param event - Verified Stripe event
    */
   async syncFromStripeEvent(event: Stripe.Event) {
-    this.logger.log(`Processing Stripe event: ${event.type}`, 'StripeService', {
-      eventType: event.type,
-      eventId: event.id,
-    });
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
@@ -338,18 +330,6 @@ export class StripeService {
 
     const status = this.mapStripeStatus(subscription.status);
 
-    this.logger.log(
-      'Looking up local subscription by stripeCustomerId',
-      'StripeService',
-      {
-        stripeCustomerId,
-        stripeSubscriptionId,
-        tier,
-        status,
-        cancelAtPeriodEnd,
-      },
-    );
-
     const local = await this.prisma.subscription.findFirst({
       where: { stripeCustomerId },
       select: { userId: true, tier: true },
@@ -367,18 +347,6 @@ export class StripeService {
     // Check if this is an upgrade to PRO
     const isUpgrade =
       local.tier !== SubscriptionTier.PRO && tier === SubscriptionTier.PRO;
-
-    this.logger.log(
-      `Updating subscription for user ${local.userId}`,
-      'StripeService',
-      {
-        userId: local.userId,
-        tier,
-        status,
-        cancelAtPeriodEnd,
-        isUpgrade,
-      },
-    );
 
     await this.subscriptionService.updateSubscriptionFromStripe({
       userId: local.userId,
@@ -400,11 +368,6 @@ export class StripeService {
         currentPeriodEnd,
       );
     }
-
-    this.logger.log(
-      `Successfully updated subscription for user ${local.userId}`,
-      'StripeService',
-    );
   }
 
   /**
@@ -420,21 +383,12 @@ export class StripeService {
         ? subscription.customer
         : subscription.customer.id;
 
-    this.logger.log('Processing subscription deletion', 'StripeService', {
-      stripeCustomerId,
-      subscriptionId: subscription.id,
-    });
-
     const local = await this.prisma.subscription.findFirst({
       where: { stripeCustomerId },
       select: { userId: true },
     });
 
     if (!local) {
-      this.logger.warn(
-        `No local subscription found for deleted stripeCustomerId: ${stripeCustomerId}`,
-        'StripeService',
-      );
       return;
     }
 
@@ -450,11 +404,6 @@ export class StripeService {
 
     // Send cancellation email
     await this.sendSubscriptionEmail(local.userId, 'cancelled', null);
-
-    this.logger.log(
-      `Subscription cancelled for user ${local.userId}`,
-      'StripeService',
-    );
   }
 
   /**
@@ -541,11 +490,6 @@ export class StripeService {
         html,
         from: defaultSender,
       });
-
-      this.logger.log(
-        `Subscription ${action} email sent to user: ${userId}`,
-        'StripeService',
-      );
     } catch (error) {
       this.logger.error(
         `Failed to send subscription email to user: ${userId}`,

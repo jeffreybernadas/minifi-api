@@ -42,14 +42,6 @@ export class EmailQueueService {
       });
 
       if (!user) {
-        this.logger.warn(
-          'User not found, skipping email',
-          'EmailQueueService',
-          {
-            userId: emailJob.userId,
-            subject: emailJob.subject,
-          },
-        );
         return;
       }
 

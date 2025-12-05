@@ -1235,10 +1235,6 @@ export class LinkService {
     });
 
     if (!enableUrlScan) {
-      this.logger.warn(
-        `URL scan skipped (feature disabled) for link ${linkId}`,
-        'LinkService',
-      );
       return;
     }
 

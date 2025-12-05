@@ -38,7 +38,6 @@ export class ChatService {
     });
 
     if (!admin) {
-      this.logger.error('No admin user found in database', 'ChatService', {});
       throw new NotFoundException(
         'Admin user not found. Please contact support.',
       );
@@ -97,16 +96,6 @@ export class ChatService {
 
     // Return existing chat instead of creating duplicate
     if (existingChat) {
-      this.logger.log(
-        `Returning existing chat with admin: ${existingChat.id}`,
-        'ChatService',
-        {
-          chatId: existingChat.id,
-          creatorId,
-          adminId: admin.id,
-        },
-      );
-
       return {
         id: existingChat.id,
         name: existingChat.name,
@@ -157,14 +146,6 @@ export class ChatService {
       return chatWithMembers;
     });
 
-    this.logger.log(`Chat created with admin: ${chat!.id}`, 'ChatService', {
-      chatId: chat!.id,
-      type: chat!.type,
-      creatorId,
-      adminId: admin.id,
-      memberCount: chat!.members.length,
-    });
-
     return {
       id: chat!.id,
       name: chat!.name,
@@ -204,15 +185,6 @@ export class ChatService {
         },
       },
     });
-
-    this.logger.log(
-      `Retrieved ${chatMembers.length} chats for user`,
-      'ChatService',
-      {
-        userId,
-        chatCount: chatMembers.length,
-      },
-    );
 
     return chatMembers.map((chatMember) => ({
       id: chatMember.chat.id,
@@ -256,13 +228,6 @@ export class ChatService {
     if (!isMember) {
       throw new ForbiddenException('You are not a member of this chat');
     }
-
-    this.logger.log(`Retrieved chat details: ${chatId}`, 'ChatService', {
-      chatId,
-      userId,
-      type: chat.type,
-      memberCount: chat.members.length,
-    });
 
     return {
       id: chat.id,
@@ -328,12 +293,6 @@ export class ChatService {
       });
 
       return newMessage;
-    });
-
-    this.logger.log(`Message sent to chat: ${chatId}`, 'ChatService', {
-      messageId: message.id,
-      chatId,
-      senderId,
     });
 
     return {
@@ -411,12 +370,6 @@ export class ChatService {
           orderBy: { joinedAt: 'asc' },
         },
       },
-    });
-
-    this.logger.log(`Member added to chat: ${chatId}`, 'ChatService', {
-      chatId,
-      newMemberId: dto.userId,
-      requesterId,
     });
 
     return {
@@ -522,18 +475,6 @@ export class ChatService {
       });
     }
 
-    this.logger.log(
-      `Retrieved ${paginatedMessages.data.length} messages for chat: ${chatId}`,
-      'ChatService',
-      {
-        chatId,
-        userId,
-        messageCount: paginatedMessages.data.length,
-        hasNextPage: paginatedMessages.meta.hasNextPage,
-        search: cursorPageOptionsDto.search,
-      },
-    );
-
     return paginatedMessages;
   }
 
@@ -616,13 +557,6 @@ export class ChatService {
         isEdited: true,
         updatedAt: new Date(),
       },
-    });
-
-    this.logger.log(`Message updated: ${messageId}`, 'ChatService', {
-      messageId,
-      chatId,
-      userId,
-      minutesSinceCreation: minutesSinceCreation.toFixed(2),
     });
 
     return {
@@ -715,13 +649,6 @@ export class ChatService {
       },
     });
 
-    this.logger.log(`Message deleted: ${messageId}`, 'ChatService', {
-      messageId,
-      chatId,
-      userId,
-      minutesSinceCreation: minutesSinceCreation.toFixed(2),
-    });
-
     return {
       id: deletedMessage.id,
       chatId: deletedMessage.chatId,
@@ -787,12 +714,6 @@ export class ChatService {
         readAt: new Date(),
       },
     });
-
-    this.logger.log(`Message marked as read: ${messageId}`, 'ChatService', {
-      messageId,
-      userId,
-      chatId: message.chatId,
-    });
   }
 
   /**
@@ -855,15 +776,5 @@ export class ChatService {
       })),
       skipDuplicates: true,
     });
-
-    this.logger.log(
-      `Marked ${messagesToMark.length} messages as read`,
-      'ChatService',
-      {
-        userId,
-        messageCount: messagesToMark.length,
-        chatIds: [...new Set(messagesToMark.map((m) => m.chatId))],
-      },
-    );
   }
 }

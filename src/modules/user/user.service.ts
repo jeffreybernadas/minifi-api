@@ -47,12 +47,6 @@ export class UserService {
         return user;
       }
 
-      // User doesn't exist, create new record
-      this.logger.log(
-        `Creating new user in database: ${userId}`,
-        'UserService',
-      );
-
       // Check if user has admin role from Keycloak JWT
       const realmRoles = keycloakUser.realm_access?.roles ?? [];
       const resourceRoles =
@@ -118,8 +112,6 @@ export class UserService {
       );
     }
 
-    this.logger.log(`Updating preferences for user: ${userId}`, 'UserService');
-
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -157,8 +149,6 @@ export class UserService {
         html,
         from: defaultSender,
       });
-
-      this.logger.log(`Welcome email sent to user: ${user.id}`, 'UserService');
     } catch (error) {
       // Don't fail user creation if email fails
       this.logger.error(

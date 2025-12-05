@@ -47,7 +47,7 @@ export class ElasticInit implements OnModuleInit {
           `Connection to Elasticsearch failed (attempt ${retryCount}/${maxRetries}). Retrying in ${delay}ms...`,
           'Elasticsearch',
         );
-        this.logger.log(
+        this.logger.error(
           `Failed to connect to Elasticsearch: ${error}`,
           'Elasticsearch',
         );

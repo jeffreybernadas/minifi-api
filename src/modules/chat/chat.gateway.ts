@@ -40,7 +40,6 @@ export class ChatGateway {
     const { chatId, userId } = payload;
 
     if (!chatId || !userId) {
-      this.logger.warn('Invalid typing event payload', 'ChatGateway', payload);
       return;
     }
 
@@ -50,11 +49,6 @@ export class ChatGateway {
       statusCode: 200,
       timestamp: new Date().toISOString(),
       data: { chatId, userId },
-    });
-
-    this.logger.log(`User typing in chat: ${chatId}`, 'ChatGateway', {
-      chatId,
-      userId,
     });
   }
 
@@ -70,11 +64,6 @@ export class ChatGateway {
     const { chatId, userId } = payload;
 
     if (!chatId || !userId) {
-      this.logger.warn(
-        'Invalid stopped typing event payload',
-        'ChatGateway',
-        payload,
-      );
       return;
     }
 
@@ -84,11 +73,6 @@ export class ChatGateway {
       statusCode: 200,
       timestamp: new Date().toISOString(),
       data: { chatId, userId },
-    });
-
-    this.logger.log(`User stopped typing in chat: ${chatId}`, 'ChatGateway', {
-      chatId,
-      userId,
     });
   }
 
@@ -105,11 +89,6 @@ export class ChatGateway {
     const { chatId, messageId, userId } = payload;
 
     if (!chatId || !messageId || !userId) {
-      this.logger.warn(
-        'Invalid message read event payload',
-        'ChatGateway',
-        payload,
-      );
       return;
     }
 
@@ -123,12 +102,6 @@ export class ChatGateway {
         statusCode: 200,
         timestamp: new Date().toISOString(),
         data: { chatId, messageId, userId },
-      });
-
-      this.logger.log(`Message read in chat: ${chatId}`, 'ChatGateway', {
-        chatId,
-        messageId,
-        userId,
       });
     } catch (error) {
       this.logger.error(
@@ -176,12 +149,6 @@ export class ChatGateway {
         timestamp: new Date().toISOString(),
         data: { chatId, messageIds, userId, count: messageIds.length },
       });
-
-      this.logger.log(`Bulk messages read in chat: ${chatId}`, 'ChatGateway', {
-        chatId,
-        userId,
-        count: messageIds.length,
-      });
     } catch (error) {
       this.logger.error(
         `Failed to mark messages as read in chat: ${chatId}`,
@@ -208,11 +175,6 @@ export class ChatGateway {
     const { chatId, userId } = payload;
 
     if (!chatId || !userId) {
-      this.logger.warn(
-        'Invalid user online event payload',
-        'ChatGateway',
-        payload,
-      );
       return;
     }
 
@@ -222,11 +184,6 @@ export class ChatGateway {
       statusCode: 200,
       timestamp: new Date().toISOString(),
       data: { chatId, userId },
-    });
-
-    this.logger.log(`User online in chat: ${chatId}`, 'ChatGateway', {
-      chatId,
-      userId,
     });
   }
 
@@ -242,11 +199,6 @@ export class ChatGateway {
     const { chatId, userId } = payload;
 
     if (!chatId || !userId) {
-      this.logger.warn(
-        'Invalid user offline event payload',
-        'ChatGateway',
-        payload,
-      );
       return;
     }
 
@@ -256,11 +208,6 @@ export class ChatGateway {
       statusCode: 200,
       timestamp: new Date().toISOString(),
       data: { chatId, userId },
-    });
-
-    this.logger.log(`User offline in chat: ${chatId}`, 'ChatGateway', {
-      chatId,
-      userId,
     });
   }
 }

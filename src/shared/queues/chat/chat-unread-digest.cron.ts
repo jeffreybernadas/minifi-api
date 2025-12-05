@@ -25,14 +25,6 @@ export class ChatUnreadDigestCron {
     timeZone: 'UTC',
   })
   async handleUnreadDigest(): Promise<void> {
-    this.logger.log(
-      'Chat unread digest cron job triggered',
-      'ChatUnreadDigestCron',
-      {
-        time: new Date().toISOString(),
-      },
-    );
-
     try {
       await this.chatQueueService.sendUnreadDigestEmails();
     } catch (error) {
