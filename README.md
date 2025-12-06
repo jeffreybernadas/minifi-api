@@ -117,7 +117,6 @@ The API will be available at `http://localhost:3001`.
 ## 📖 API Documentation
 
 - **Swagger UI**: http://localhost:3001/api/docs
-- **API Docs**: See [API_DOCUMENTATION.md](../API_DOCUMENTATION.md)
 
 ## 🧪 Testing
 

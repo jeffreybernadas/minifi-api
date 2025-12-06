@@ -46,7 +46,7 @@ export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
             "You now have access to all premium features including unlimited links, custom aliases, advanced analytics, and priority support. Let's make the most of it!",
           features: [
             '🔗 Unlimited shortened links',
-            '✨ Custom aliases (minifi.link/your-brand)',
+            '✨ Custom aliases (minifi-url.vercel.app/your-brand)',
             '📊 Advanced analytics & reports',
             '📧 Monthly performance reports',
             '⚡ Priority support',
@@ -188,21 +188,21 @@ export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
                 <Link
-                  href="https://minifi.link"
+                  href="https://minifi-url.vercel.app"
                   className="text-[#666666] underline"
                 >
-                  minifi.link
+                  minifi-url.vercel.app
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi.link/privacy"
+                  href="https://minifi-url.vercel.app/privacy"
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi.link/terms"
+                  href="https://minifi-url.vercel.app/terms"
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -221,7 +221,7 @@ SubscriptionEmailTemplate.PreviewProps = {
   action: 'upgraded',
   tier: 'PRO',
   periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  dashboardUrl: 'https://minifi.link/dashboard',
+  dashboardUrl: 'https://minifi-url.vercel.app/dashboard',
 } as SubscriptionEmailProps;
 
 export default SubscriptionEmailTemplate;

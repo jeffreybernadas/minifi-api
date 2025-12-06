@@ -72,7 +72,7 @@ export const LinkExpiringEmailTemplate = (props: LinkExpiringEmailProps) => {
                   </Text>
 
                   <Text className="text-[14px] text-blue-600 font-medium m-0 mt-[4px]">
-                    minifi.link/{link.shortCode}
+                    minifi-url.vercel.app/{link.shortCode}
                   </Text>
 
                   <Text className="text-[14px] text-[#666666] leading-[24px] break-all m-0 mt-[4px]">
@@ -124,21 +124,21 @@ export const LinkExpiringEmailTemplate = (props: LinkExpiringEmailProps) => {
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
                 <Link
-                  href="https://minifi.link"
+                  href="https://minifi-url.vercel.app"
                   className="text-[#666666] underline"
                 >
-                  minifi.link
+                  minifi-url.vercel.app
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi.link/privacy"
+                  href="https://minifi-url.vercel.app/privacy"
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi.link/terms"
+                  href="https://minifi-url.vercel.app/terms"
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -169,7 +169,7 @@ LinkExpiringEmailTemplate.PreviewProps = {
     },
   ],
   totalCount: 2,
-  dashboardUrl: 'https://minifi.link/dashboard/links',
+  dashboardUrl: 'https://minifi-url.vercel.app/dashboard/links',
 } as LinkExpiringEmailProps;
 
 export default LinkExpiringEmailTemplate;
