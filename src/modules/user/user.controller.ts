@@ -1,5 +1,6 @@
 import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { CacheTTL } from '@nestjs/cache-manager';
 import {
   ApiStandardResponse,
   ApiStandardErrorResponse,
@@ -20,6 +21,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('/profile')
+  @CacheTTL(0.000001) // Disable caching for user profiles (user-specific data)
   @ApiOperation({
     summary: 'Get current user profile',
     description:
