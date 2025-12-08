@@ -7,7 +7,6 @@ import { EmailRenderer } from '@/utils/email/email.util';
 import { User } from '@/generated/prisma/client';
 import { KeycloakJWT } from './interfaces/keycloak-jwt.interface';
 import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
-import { GlobalConfig } from '@/config/config.type';
 
 /**
  * Service for managing user profiles with sync-on-demand pattern
@@ -20,7 +19,7 @@ export class UserService {
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly emailProducer: EmailProducer,
-    private readonly configService: ConfigService<GlobalConfig>,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -48,9 +47,12 @@ export class UserService {
       }
 
       // Check if user has admin role from Keycloak JWT
+      // Combine realm roles and client-specific roles
       const realmRoles = keycloakUser.realm_access?.roles ?? [];
+      const keycloakClientId =
+        this.configService.getOrThrow('keycloak.clientId') ?? 'minifi';
       const resourceRoles =
-        keycloakUser.resource_access?.['minifi']?.roles ?? [];
+        keycloakUser.resource_access?.[keycloakClientId]?.roles ?? [];
       const allRoles = [...realmRoles, ...resourceRoles];
       const isAdmin =
         allRoles.includes('admin') || allRoles.includes('superadmin');

@@ -190,6 +190,19 @@ export class UserProfileDto {
   address?: string | null;
 
   @ApiProperty({
+    description: 'User subscription tier',
+    example: 'FREE',
+    enum: ['GUEST', 'FREE', 'PRO'],
+  })
+  userType: string;
+
+  @ApiProperty({
+    description: 'Whether user has admin privileges',
+    example: false,
+  })
+  isAdmin: boolean;
+
+  @ApiProperty({
     description: 'Account creation timestamp',
     example: '2025-10-05T12:00:00.000Z',
   })

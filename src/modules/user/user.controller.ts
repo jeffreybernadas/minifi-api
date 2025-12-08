@@ -74,6 +74,8 @@ export class UserController {
       phoneNumber: localUser.phoneNumber,
       avatarUrl: localUser.avatarUrl,
       address: localUser.address,
+      userType: localUser.userType,
+      isAdmin: localUser.isAdmin,
       createdAt: localUser.createdAt,
       updatedAt: localUser.updatedAt,
     };
