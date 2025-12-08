@@ -35,13 +35,21 @@ export class FileService {
       meta,
     );
 
+    const minioUrl = this.configService.getOrThrow('minio.url', {
+      infer: true,
+    });
+    // Ensure URL has protocol
+    const fullUrl = minioUrl.startsWith('http')
+      ? minioUrl
+      : `https://${minioUrl}`;
+
     return {
       message: 'File uploaded successfully',
       originalname: file.originalname,
       filename: objectName,
       mimetype: file.mimetype,
       size: file.size,
-      path: `${this.configService.getOrThrow('minio.url', { infer: true })}/${bucketName}/${objectName}`,
+      path: `${fullUrl}/${bucketName}/${objectName}`,
     };
   }
 
@@ -58,6 +66,12 @@ export class FileService {
       await this.minioClient.makeBucket(bucketName);
     }
     const folderName = folder ?? this.configService.getOrThrow('minio.folder');
+
+    const minioUrl = this.configService.getOrThrow('minio.url');
+    // Ensure URL has protocol
+    const fullUrl = minioUrl.startsWith('http')
+      ? minioUrl
+      : `https://${minioUrl}`;
 
     const uploadPromises = files.map(async (file) => {
       const fileName = file.originalname;
@@ -76,7 +90,7 @@ export class FileService {
         filename: objectName,
         mimetype: file.mimetype,
         size: file.size,
-        path: `${this.configService.getOrThrow('minio.url')}/${bucketName}/${objectName}`,
+        path: `${fullUrl}/${bucketName}/${objectName}`,
       };
     });
 
