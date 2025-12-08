@@ -15,9 +15,9 @@ export class KeycloakConfigService implements KeycloakConnectOptionsFactory {
       authServerUrl: this.configService.get('keycloak.url'),
       realm: this.configService.get('keycloak.realm'),
       clientId: this.configService.get('keycloak.clientId'),
-      secret: this.configService.get('keycloak.clientSecret')!,
+      secret: '',
       policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
-      tokenValidation: TokenValidation.ONLINE,
+      tokenValidation: TokenValidation.OFFLINE,
     };
   }
 }
