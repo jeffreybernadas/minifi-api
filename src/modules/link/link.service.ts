@@ -32,7 +32,7 @@ import {
 } from '@/utils/visitor/visitor-id.util';
 import { maskIpAddress } from '@/utils/visitor/ip-mask.util';
 import { LoggerService } from '@/shared/logger/logger.service';
-import UAParser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
 import * as geoip from 'geoip-lite';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateGuestLinkDto } from './dto/create-guest-link.dto';
