@@ -1,7 +1,7 @@
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { ServerOptions } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { INestApplicationContext } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GlobalConfig } from '@/config/config.type';
@@ -12,6 +12,8 @@ import { GlobalConfig } from '@/config/config.type';
  */
 export class WebSocketRedisAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter> | undefined;
+  private pubClient: RedisClientType | undefined;
+  private subClient: RedisClientType | undefined;
 
   constructor(
     app: INestApplicationContext,
@@ -33,23 +35,45 @@ export class WebSocketRedisAdapter extends IoAdapter {
       infer: true,
     });
 
-    // Create Redis clients for pub/sub
-    const pubClient = createClient({
+    // Create Redis clients for pub/sub with reconnect strategy
+    this.pubClient = createClient({
       socket: {
         host: redisHost,
         port: redisPort,
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            return new Error('Redis pub client max retries reached');
+          }
+          return Math.min(retries * 100, 3000);
+        },
       },
       username: redisUsername,
       password: redisPassword,
     });
 
-    const subClient = pubClient.duplicate();
+    this.subClient = this.pubClient.duplicate();
+
+    // Attach error handlers to prevent "missing error handler" warnings
+    this.pubClient.on('error', () => {});
+    this.subClient.on('error', () => {});
 
     // Connect both clients
-    await Promise.all([pubClient.connect(), subClient.connect()]);
+    await Promise.all([this.pubClient.connect(), this.subClient.connect()]);
 
     // Create adapter constructor
-    this.adapterConstructor = createAdapter(pubClient, subClient);
+    this.adapterConstructor = createAdapter(this.pubClient, this.subClient);
+  }
+
+  /**
+   * Disconnect Redis clients on shutdown
+   */
+  async disconnect(): Promise<void> {
+    if (this.pubClient?.isOpen) {
+      await this.pubClient.quit();
+    }
+    if (this.subClient?.isOpen) {
+      await this.subClient.quit();
+    }
   }
 
   /**

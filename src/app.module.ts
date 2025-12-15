@@ -113,6 +113,12 @@ import openaiConfig from '@/config/openai/openai.config';
           password: config.get('redis.password'),
           ttl: 60000,
           no_read_check: true,
+          retry_strategy: (options: { attempt: number }) => {
+            if (options.attempt > 10) {
+              return new Error('Redis cache max retries reached');
+            }
+            return Math.min(options.attempt * 100, 3000);
+          },
         };
       },
     }),
