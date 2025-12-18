@@ -360,6 +360,10 @@ export class LinkService {
       await this.ensureTagsBelongToUser(userId, dto.tagIds);
     }
 
+    // Check if custom alias is changing - if so, invalidate QR code
+    const isAliasChanging =
+      dto.customAlias !== undefined && dto.customAlias !== link.customAlias;
+
     const data: {
       customAlias?: string;
       title?: string;
@@ -372,6 +376,7 @@ export class LinkService {
       notes?: string;
       password?: string | null;
       status?: LinkStatus;
+      qrCodeUrl?: string | null;
     } = {
       customAlias: dto.customAlias,
       title: dto.title,
@@ -387,6 +392,8 @@ export class LinkService {
         : (dto.isArchived ?? link.isArchived)
           ? LinkStatus.ARCHIVED
           : link.status,
+      // Invalidate QR code if alias changes (URL will be different)
+      ...(isAliasChanging && link.qrCodeUrl ? { qrCodeUrl: null } : {}),
     };
 
     // Only include password in update if explicitly set (null or new value)
