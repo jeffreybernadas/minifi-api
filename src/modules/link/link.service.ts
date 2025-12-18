@@ -524,7 +524,7 @@ export class LinkService {
       throw new NotFoundException('Link not found');
     }
 
-    const shortUrl = `${this.configService.getOrThrow('app.url', { infer: true })}/${link.customAlias ?? link.shortCode}`;
+    const shortUrl = `${this.configService.getOrThrow('app.frontendUrl', { infer: true })}/r/${link.customAlias ?? link.shortCode}`;
     const qrBuffer = await generateQRCodeBuffer(shortUrl);
 
     const bucket = 'qr-codes';
@@ -584,7 +584,16 @@ export class LinkService {
     }
 
     if (link.status === LinkStatus.SCHEDULED) {
-      throw new ForbiddenException('Link is scheduled and not yet active');
+      // Check if scheduled time has passed - activate the link on-the-fly
+      if (link.scheduledAt && link.scheduledAt <= new Date()) {
+        await this.prisma.link.update({
+          where: { id: link.id },
+          data: { status: LinkStatus.ACTIVE },
+        });
+        link.status = LinkStatus.ACTIVE;
+      } else {
+        throw new ForbiddenException('Link is scheduled and not yet active');
+      }
     }
 
     // Check click limit
@@ -1193,6 +1202,38 @@ export class LinkService {
     }
   }
 
+  /**
+   * Computes the effective status based on current time, scheduledAt, and expiresAt.
+   * This ensures accurate status display without waiting for cron jobs.
+   */
+  private getEffectiveStatus(link: Link): LinkStatus {
+    const now = new Date();
+
+    // If link is already in a terminal state, return as-is
+    if (
+      link.status === LinkStatus.BLOCKED ||
+      link.status === LinkStatus.DISABLED ||
+      link.status === LinkStatus.ARCHIVED
+    ) {
+      return link.status;
+    }
+
+    // Check if expired
+    if (link.expiresAt && link.expiresAt <= now) {
+      return LinkStatus.DISABLED;
+    }
+
+    // Check if scheduled and time has passed
+    if (link.status === LinkStatus.SCHEDULED) {
+      if (link.scheduledAt && link.scheduledAt <= now) {
+        return LinkStatus.ACTIVE;
+      }
+      return LinkStatus.SCHEDULED;
+    }
+
+    return link.status;
+  }
+
   private mapToLinkResponse(link: Link): LinkResponseDto {
     return {
       id: link.id,
@@ -1202,7 +1243,7 @@ export class LinkService {
       customAlias: link.customAlias ?? undefined,
       title: link.title ?? undefined,
       description: link.description ?? undefined,
-      status: link.status,
+      status: this.getEffectiveStatus(link),
       hasPassword: Boolean(link.password),
       scheduledAt: link.scheduledAt,
       expiresAt: link.expiresAt,
