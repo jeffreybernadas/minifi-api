@@ -25,7 +25,6 @@ import {
   CancelSubscriptionResponseDto,
   WebhookReceivedResponseDto,
 } from './dto/subscription-response.dto';
-import { CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('subscriptions')
 @ApiBearerAuth('JWT')
@@ -38,7 +37,6 @@ export class SubscriptionController {
   ) {}
 
   @Get('me')
-  @CacheTTL(0.000001)
   @ApiOperation({
     summary: 'Get current subscription',
     description:

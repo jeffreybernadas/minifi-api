@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
 import appConfig from '@/config/app/app.config';
 import { DatabaseModule } from '@/database/database.module';
-import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
+import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { CacheService } from '@/shared/cache/cache.service';
 import { LoggerService } from '@/shared/logger/logger.service';
@@ -203,10 +203,7 @@ import openaiConfig from '@/config/openai/openai.config';
       provide: APP_INTERCEPTOR,
       useClass: TransformResponseInterceptor,
     },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
-    },
+
     {
       provide: APP_GUARD,
       useClass: UnifiedThrottlerGuard,
