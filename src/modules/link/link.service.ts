@@ -156,6 +156,13 @@ export class LinkService {
             }
           : undefined,
       },
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
     });
 
     await this.enqueueScan(link.id, link.originalUrl, userId);
@@ -280,6 +287,13 @@ export class LinkService {
       {
         where,
         orderBy: { createdAt: filters.order ?? 'desc' },
+        include: {
+          tags: {
+            include: {
+              tag: true,
+            },
+          },
+        },
       },
     );
 
@@ -293,6 +307,13 @@ export class LinkService {
   async getLinkById(id: string, userId: string): Promise<LinkResponseDto> {
     const link = await this.prisma.link.findFirst({
       where: { id, userId },
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
     });
 
     if (!link) {
@@ -418,6 +439,13 @@ export class LinkService {
               },
             }
           : {}),
+      },
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
       },
     });
 
@@ -1815,7 +1843,7 @@ export class LinkService {
     return link.status;
   }
 
-  private mapToLinkResponse(link: Link): LinkResponseDto {
+  private mapToLinkResponse(link: Link & { tags?: any[] }): LinkResponseDto {
     return {
       id: link.id,
       userId: link.userId,
@@ -1841,6 +1869,15 @@ export class LinkService {
       uniqueClickCount: link.uniqueClickCount,
       lastClickedAt: link.lastClickedAt,
       qrCodeUrl: link.qrCodeUrl,
+      tags: link.tags?.map((linkTag) => ({
+        id: linkTag.tag.id,
+        userId: linkTag.tag.userId,
+        name: linkTag.tag.name,
+        backgroundColor: linkTag.tag.backgroundColor,
+        textColor: linkTag.tag.textColor,
+        createdAt: linkTag.tag.createdAt,
+        updatedAt: linkTag.tag.updatedAt,
+      })),
       createdAt: link.createdAt,
       updatedAt: link.updatedAt,
     };
