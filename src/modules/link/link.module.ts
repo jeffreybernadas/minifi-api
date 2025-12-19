@@ -9,7 +9,7 @@ import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
   imports: [ScanQueueModule, SubscriptionModule],
-  controllers: [LinkController, RedirectController, TagController],
+  controllers: [TagController, RedirectController, LinkController],
   providers: [LinkService, TagService],
   exports: [LinkService, TagService],
 })
