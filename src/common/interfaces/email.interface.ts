@@ -60,6 +60,11 @@ export interface TopCountryData {
   clicks: number;
 }
 
+export interface TopCityData {
+  city: string;
+  clicks: number;
+}
+
 export interface TopDeviceData {
   device: string;
   clicks: number;
@@ -120,6 +125,7 @@ export interface UserMonthlyAnalytics {
   previousMonthClicks: number;
   topLinks: TopLinkData[];
   topCountries: TopCountryData[];
+  topCities: TopCityData[];
   topDevices: TopDeviceData[];
   topBrowsers: TopBrowserData[];
   topOs: TopOSData[];

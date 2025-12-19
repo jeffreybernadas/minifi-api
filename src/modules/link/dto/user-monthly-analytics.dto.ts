@@ -25,6 +25,14 @@ export class TopCountryDataDto {
   clicks: number;
 }
 
+export class TopCityDataDto {
+  @ApiProperty()
+  city: string;
+
+  @ApiProperty()
+  clicks: number;
+}
+
 export class TopDeviceDataDto {
   @ApiProperty()
   device: string;
@@ -103,6 +111,9 @@ export class UserMonthlyAnalyticsDto {
 
   @ApiProperty({ type: [TopCountryDataDto] })
   topCountries: TopCountryDataDto[];
+
+  @ApiProperty({ type: [TopCityDataDto] })
+  topCities: TopCityDataDto[];
 
   @ApiProperty({ type: [TopDeviceDataDto] })
   topDevices: TopDeviceDataDto[];

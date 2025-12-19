@@ -60,6 +60,7 @@ import {
   UserMonthlyAnalytics,
   TopLinkData,
   TopCountryData,
+  TopCityData,
   TopDeviceData,
   TopBrowserData,
   TopOSData,
@@ -1139,6 +1140,7 @@ export class LinkService {
       previousMonthClicks,
       topLinksRaw,
       topCountriesRaw,
+      topCitiesRaw,
       topDevicesRaw,
       topBrowsersRaw,
       topOsRaw,
@@ -1210,6 +1212,19 @@ export class LinkService {
           link: { userId },
           ...clickedAtFilter,
           country: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 cities
+      this.prisma.linkAnalytics.groupBy({
+        by: ['city'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          city: { not: null },
         },
         _count: { id: true },
         orderBy: { _count: { id: 'desc' } },
@@ -1331,6 +1346,11 @@ export class LinkService {
       clicks: c._count.id,
     }));
 
+    const topCities: TopCityData[] = topCitiesRaw.map((c) => ({
+      city: c.city ?? 'Unknown',
+      clicks: c._count.id,
+    }));
+
     const topReferrers: TopReferrerData[] = topReferrersRaw.map((r) => ({
       referrer: r.referrerDomain ?? 'Direct',
       clicks: r._count.id,
@@ -1366,6 +1386,7 @@ export class LinkService {
       previousMonthClicks,
       topLinks,
       topCountries,
+      topCities,
       topDevices,
       topBrowsers,
       topOs,
@@ -1409,6 +1430,7 @@ export class LinkService {
       previousMonthClicks,
       topLinksRaw,
       topCountriesRaw,
+      topCitiesRaw,
       topDevicesRaw,
       topBrowsersRaw,
       topOsRaw,
@@ -1478,6 +1500,19 @@ export class LinkService {
           link: { userId },
           ...clickedAtFilter,
           country: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 cities
+      this.prisma.linkAnalytics.groupBy({
+        by: ['city'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          city: { not: null },
         },
         _count: { id: true },
         orderBy: { _count: { id: 'desc' } },
@@ -1610,6 +1645,11 @@ export class LinkService {
       clicks: c._count.id,
     }));
 
+    const topCities: TopCityData[] = topCitiesRaw.map((c) => ({
+      city: c.city ?? 'Unknown',
+      clicks: c._count.id,
+    }));
+
     const topReferrers: TopReferrerData[] = topReferrersRaw.map((r) => ({
       referrer: r.referrerDomain ?? 'Direct',
       clicks: r._count.id,
@@ -1644,6 +1684,7 @@ export class LinkService {
       previousMonthClicks,
       topLinks,
       topCountries,
+      topCities,
       topDevices,
       topBrowsers,
       topOs,
