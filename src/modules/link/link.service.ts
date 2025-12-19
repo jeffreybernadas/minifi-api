@@ -61,6 +61,8 @@ import {
   TopLinkData,
   TopCountryData,
   TopDeviceData,
+  TopBrowserData,
+  TopOSData,
   TopReferrerData,
 } from '@/common/interfaces/email.interface';
 
@@ -744,13 +746,24 @@ export class LinkService {
 
   /**
    * Get paginated link analytics
+   * FREE users: No access to click log (returns empty)
+   * PRO users: Full paginated click log
    */
   async getLinkAnalytics(
     linkId: string,
     userId: string,
     filters: AnalyticsFilterDto,
   ): Promise<OffsetPaginatedDto<LinkAnalyticsResponseDto>> {
-    // Verify ownership
+    // Get user with tier info
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify link ownership
     const link = await this.prisma.link.findFirst({
       where: { id: linkId, userId },
     });
@@ -758,11 +771,43 @@ export class LinkService {
       throw new NotFoundException('Link not found');
     }
 
-    // Build where clause with filters
+    const isPro = user.userType === UserType.PRO;
+
+    // FREE users don't have access to click log
+    if (!isPro) {
+      return {
+        data: [],
+        meta: {
+          page: 1,
+          limit: filters.limit ?? 10,
+          itemCount: 0,
+          pageCount: 0,
+          hasPreviousPage: false,
+          hasNextPage: false,
+        },
+      };
+    }
+
+    const startDate = filters.startDate
+      ? new Date(filters.startDate)
+      : undefined;
+    const endDate = filters.endDate ? new Date(filters.endDate) : undefined;
+    const hasDateFilter =
+      (startDate && !Number.isNaN(startDate.getTime())) ||
+      (endDate && !Number.isNaN(endDate.getTime()));
+
+    // PRO users get full click log
     const where: Prisma.LinkAnalyticsWhereInput = {
       linkId,
       ...(filters.countryCode && { countryCode: filters.countryCode }),
       ...(filters.device && { device: filters.device }),
+      ...(hasDateFilter && {
+        clickedAt: {
+          ...(startDate &&
+            !Number.isNaN(startDate.getTime()) && { gte: startDate }),
+          ...(endDate && !Number.isNaN(endDate.getTime()) && { lte: endDate }),
+        },
+      }),
       ...(filters.search && {
         OR: [
           { referrer: { contains: filters.search, mode: 'insensitive' } },
@@ -772,7 +817,6 @@ export class LinkService {
       }),
     };
 
-    // Paginate
     const paginated = await offsetPaginateWithPrisma(
       this.prisma.linkAnalytics,
       filters,
@@ -793,12 +837,34 @@ export class LinkService {
 
   /**
    * Get analytics summary with aggregations
+   *
+   * Date filtering behavior:
+   * - No dates (default): Returns all-time stats, but clicksByDate limited to:
+   *   * FREE: Last 7 days
+   *   * PRO: Last 90 days
+   * - With dates: Filters ALL data (stats + chart) by date range, no limit
+   *   * FREE: Date picker disabled (frontend)
+   *   * PRO: Can filter any date range
+   *
+   * Top results:
+   * - FREE: Top 5 countries only
+   * - PRO: Top 10 for all categories (countries, cities, devices, browsers, referrers)
    */
   async getAnalyticsSummary(
     linkId: string,
     userId: string,
+    filters?: AnalyticsFilterDto,
   ): Promise<LinkAnalyticsSummaryDto> {
-    // Verify ownership
+    // Get user with tier info
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify link ownership
     const link = await this.prisma.link.findFirst({
       where: { id: linkId, userId },
     });
@@ -806,82 +872,148 @@ export class LinkService {
       throw new NotFoundException('Link not found');
     }
 
-    // Run all aggregations in parallel
-    const [
-      totalClicks,
-      uniqueVisitors,
-      byCountry,
-      byCity,
-      byDevice,
-      byBrowser,
-      byReferrer,
-      clicksByDate,
-    ] = await Promise.all([
+    const isPro = user.userType === UserType.PRO;
+    const topLimit = isPro ? 10 : 5;
+    const daysLimit = isPro ? 90 : 7;
+
+    // Parse dates if provided
+    const startDate = filters?.startDate
+      ? new Date(filters.startDate)
+      : undefined;
+    const endDate = filters?.endDate ? new Date(filters.endDate) : undefined;
+
+    // Validate dates
+    const isValidStartDate = startDate && !Number.isNaN(startDate.getTime());
+    const isValidEndDate = endDate && !Number.isNaN(endDate.getTime());
+    const hasDateFilter = isValidStartDate || isValidEndDate;
+
+    // Build Prisma filter for non-raw queries
+    const clickedAtFilter = hasDateFilter
+      ? {
+          clickedAt: {
+            ...(isValidStartDate && { gte: startDate }),
+            ...(isValidEndDate && { lte: endDate }),
+          },
+        }
+      : {};
+
+    // Query for clicks by date (timeline chart)
+    // Uses raw SQL for efficient date aggregation
+    const clicksByDateQuery = hasDateFilter
+      ? // Custom date range - filter by dates, no limit
+        this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+          SELECT
+            DATE("clickedAt") as date,
+            COUNT(*)::bigint as count
+          FROM "LinkAnalytics"
+          WHERE "linkId" = ${linkId}
+            ${isValidStartDate ? Prisma.sql`AND "clickedAt" >= ${startDate}` : Prisma.empty}
+            ${isValidEndDate ? Prisma.sql`AND "clickedAt" <= ${endDate}` : Prisma.empty}
+          GROUP BY DATE("clickedAt")
+          ORDER BY DATE("clickedAt") ASC
+        `
+      : // No date range - limit to recent days (7 for FREE, 90 for PRO)
+        this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+          SELECT
+            DATE("clickedAt") as date,
+            COUNT(*)::bigint as count
+          FROM "LinkAnalytics"
+          WHERE "linkId" = ${linkId}
+            AND "clickedAt" >= NOW() - INTERVAL '${Prisma.raw(daysLimit.toString())} days'
+          GROUP BY DATE("clickedAt")
+          ORDER BY DATE("clickedAt") ASC
+        `;
+
+    const baseQueries = [
       // Total clicks
-      this.prisma.linkAnalytics.count({ where: { linkId } }),
+      this.prisma.linkAnalytics.count({
+        where: { linkId, ...clickedAtFilter },
+      }),
 
       // Unique visitors
       this.prisma.linkAnalytics.count({
-        where: { linkId, isUnique: true },
+        where: { linkId, isUnique: true, ...clickedAtFilter },
       }),
 
-      // Top 5 countries
+      // Top countries (5 for FREE, 10 for PRO)
       this.prisma.linkAnalytics.groupBy({
         by: ['country'],
         _count: { country: true },
-        where: { linkId, country: { not: null } },
+        where: { linkId, country: { not: null }, ...clickedAtFilter },
         orderBy: { _count: { country: 'desc' } },
-        take: 5,
+        take: topLimit,
       }),
 
-      // Top 5 cities
-      this.prisma.linkAnalytics.groupBy({
-        by: ['city'],
-        _count: { city: true },
-        where: { linkId, city: { not: null } },
-        orderBy: { _count: { city: 'desc' } },
-        take: 5,
-      }),
+      clicksByDateQuery,
+    ];
 
-      // Top 5 devices
-      this.prisma.linkAnalytics.groupBy({
-        by: ['device'],
-        _count: { device: true },
-        where: { linkId, device: { not: null } },
-        orderBy: { _count: { device: 'desc' } },
-        take: 5,
-      }),
+    // PRO-only queries
+    const proQueries = isPro
+      ? [
+          // Top 10 cities (PRO only)
+          this.prisma.linkAnalytics.groupBy({
+            by: ['city'],
+            _count: { city: true },
+            where: { linkId, city: { not: null }, ...clickedAtFilter },
+            orderBy: { _count: { city: 'desc' } },
+            take: 10,
+          }),
 
-      // Top 5 browsers
-      this.prisma.linkAnalytics.groupBy({
-        by: ['browser'],
-        _count: { browser: true },
-        where: { linkId, browser: { not: null } },
-        orderBy: { _count: { browser: 'desc' } },
-        take: 5,
-      }),
+          // Top 10 devices (PRO only)
+          this.prisma.linkAnalytics.groupBy({
+            by: ['device'],
+            _count: { device: true },
+            where: { linkId, device: { not: null }, ...clickedAtFilter },
+            orderBy: { _count: { device: 'desc' } },
+            take: 10,
+          }),
 
-      // Top 5 referrers by domain
-      this.prisma.linkAnalytics.groupBy({
-        by: ['referrerDomain'],
-        _count: { referrerDomain: true },
-        where: { linkId, referrerDomain: { not: null } },
-        orderBy: { _count: { referrerDomain: 'desc' } },
-        take: 5,
-      }),
+          // Top 10 browsers (PRO only)
+          this.prisma.linkAnalytics.groupBy({
+            by: ['browser'],
+            _count: { browser: true },
+            where: { linkId, browser: { not: null }, ...clickedAtFilter },
+            orderBy: { _count: { browser: 'desc' } },
+            take: 10,
+          }),
 
-      // Clicks by date (last 30 days)
-      this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
-        SELECT
-          DATE("clickedAt") as date,
-          COUNT(*)::bigint as count
-        FROM "LinkAnalytics"
-        WHERE "linkId" = ${linkId}
-        GROUP BY DATE("clickedAt")
-        ORDER BY DATE("clickedAt") DESC
-        LIMIT 30
-      `,
-    ]);
+          // Top 10 referrers (PRO only)
+          this.prisma.linkAnalytics.groupBy({
+            by: ['referrerDomain'],
+            _count: { referrerDomain: true },
+            where: {
+              linkId,
+              referrerDomain: { not: null },
+              ...clickedAtFilter,
+            },
+            orderBy: { _count: { referrerDomain: 'desc' } },
+            take: 10,
+          }),
+        ]
+      : [];
+
+    const results = await Promise.all([...baseQueries, ...proQueries]);
+
+    // Extract base results
+    const [totalClicks, uniqueVisitors, byCountry, clicksByDate] = results as [
+      number,
+      number,
+      Array<{ country: string | null; _count: { country: number } }>,
+      Array<{ date: Date; count: bigint }>,
+    ];
+
+    // Extract PRO results (or empty arrays for FREE)
+    const [byCity, byDevice, byBrowser, byReferrer] = isPro
+      ? (results.slice(4) as [
+          Array<{ city: string | null; _count: { city: number } }>,
+          Array<{ device: string | null; _count: { device: number } }>,
+          Array<{ browser: string | null; _count: { browser: number } }>,
+          Array<{
+            referrerDomain: string | null;
+            _count: { referrerDomain: number };
+          }>,
+        ])
+      : [[], [], [], []];
 
     return {
       totalClicks,
@@ -916,19 +1048,88 @@ export class LinkService {
   }
 
   /**
-   * Get aggregated monthly analytics for all of a user's links
-   * Used by monthly report cron - runs all queries in parallel for efficiency
+   * Get aggregated analytics for all of a user's links (for API/dashboard)
+   *
+   * Date filtering behavior:
+   * - No dates (default): Returns all-time stats, but clicksByDate limited to:
+   *   * FREE: Last 7 days
+   *   * PRO: Last 90 days
+   * - With dates: Filters ALL data (stats + chart) by date range, no limit
+   *   * FREE: Date picker disabled (frontend)
+   *   * PRO: Can filter any date range
    */
-  async getUserMonthlyAnalytics(
+  async getGlobalAnalytics(
     userId: string,
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
   ): Promise<UserMonthlyAnalytics> {
-    // Previous month date range for growth calculation
-    const prevMonthStart = new Date(startDate);
-    prevMonthStart.setMonth(prevMonthStart.getMonth() - 1);
-    const prevMonthEnd = new Date(endDate);
-    prevMonthEnd.setMonth(prevMonthEnd.getMonth() - 1);
+    // Get user tier for determining limits
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPro = user.userType === UserType.PRO;
+    const daysLimit = isPro ? 90 : 7;
+    const hasDateFilter = startDate !== undefined || endDate !== undefined;
+
+    // Build date filter for Prisma queries
+    const clickedAtFilter = hasDateFilter
+      ? {
+          clickedAt: {
+            ...(startDate && { gte: startDate }),
+            ...(endDate && { lte: endDate }),
+          },
+        }
+      : {};
+
+    const createdAtFilter = hasDateFilter
+      ? {
+          createdAt: {
+            ...(startDate && { gte: startDate }),
+            ...(endDate && { lte: endDate }),
+          },
+        }
+      : {};
+
+    // Previous month calculations (only if dates provided for growth)
+    const prevMonthStart = startDate
+      ? new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000)
+      : undefined;
+    const prevMonthEnd = endDate
+      ? new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000)
+      : undefined;
+
+    // Build clicks by date query with optional filtering
+    const clicksByDateQuery = hasDateFilter
+      ? // Custom date range - filter by dates, no limit
+        this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+          SELECT
+            DATE("clickedAt") as date,
+            COUNT(*)::bigint as count
+          FROM "LinkAnalytics" la
+          JOIN "Link" l ON la."linkId" = l.id
+          WHERE l."userId" = ${userId}
+            ${startDate ? Prisma.sql`AND la."clickedAt" >= ${startDate}` : Prisma.empty}
+            ${endDate ? Prisma.sql`AND la."clickedAt" <= ${endDate}` : Prisma.empty}
+          GROUP BY DATE("clickedAt")
+          ORDER BY date ASC
+        `
+      : // No date range - limit to recent days (7 for FREE, 90 for PRO)
+        this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+          SELECT
+            DATE("clickedAt") as date,
+            COUNT(*)::bigint as count
+          FROM "LinkAnalytics" la
+          JOIN "Link" l ON la."linkId" = l.id
+          WHERE l."userId" = ${userId}
+            AND la."clickedAt" >= NOW() - INTERVAL '${Prisma.raw(daysLimit.toString())} days'
+          GROUP BY DATE("clickedAt")
+          ORDER BY date ASC
+        `;
 
     const [
       totalClicks,
@@ -939,59 +1140,62 @@ export class LinkService {
       topLinksRaw,
       topCountriesRaw,
       topDevicesRaw,
+      topBrowsersRaw,
+      topOsRaw,
       topReferrersRaw,
       clicksByDateRaw,
     ] = await Promise.all([
-      // Total clicks this month
+      // Total clicks (filtered or all-time)
       this.prisma.linkAnalytics.count({
         where: {
           link: { userId },
-          clickedAt: { gte: startDate, lte: endDate },
+          ...clickedAtFilter,
         },
       }),
 
-      // Unique visitors this month
+      // Unique visitors (filtered or all-time)
       this.prisma.linkAnalytics.groupBy({
         by: ['visitorId'],
         where: {
           link: { userId },
-          clickedAt: { gte: startDate, lte: endDate },
+          ...clickedAtFilter,
           isUnique: true,
         },
       }),
 
-      // Total active links
+      // Total active links (always all-time)
       this.prisma.link.count({
         where: { userId, isArchived: false },
       }),
 
-      // Links created this month
+      // Links created (filtered or all-time)
       this.prisma.link.count({
         where: {
           userId,
-          createdAt: { gte: startDate, lte: endDate },
+          ...createdAtFilter,
         },
       }),
 
-      // Previous month clicks for growth calculation
-      this.prisma.linkAnalytics.count({
-        where: {
-          link: { userId },
-          clickedAt: { gte: prevMonthStart, lte: prevMonthEnd },
-        },
-      }),
+      // Previous month clicks for growth calculation (only if dates provided)
+      hasDateFilter && prevMonthStart && prevMonthEnd
+        ? this.prisma.linkAnalytics.count({
+            where: {
+              link: { userId },
+              clickedAt: { gte: prevMonthStart, lte: prevMonthEnd },
+            },
+          })
+        : Promise.resolve(0),
 
       // Top 5 performing links
       this.prisma.link.findMany({
         where: { userId, isArchived: false },
         select: {
+          id: true,
           shortCode: true,
           title: true,
           _count: {
             select: {
-              analytics: {
-                where: { clickedAt: { gte: startDate, lte: endDate } },
-              },
+              analytics: hasDateFilter ? { where: clickedAtFilter } : true,
             },
           },
         },
@@ -1004,7 +1208,7 @@ export class LinkService {
         by: ['country'],
         where: {
           link: { userId },
-          clickedAt: { gte: startDate, lte: endDate },
+          ...clickedAtFilter,
           country: { not: null },
         },
         _count: { id: true },
@@ -1017,8 +1221,32 @@ export class LinkService {
         by: ['device'],
         where: {
           link: { userId },
-          clickedAt: { gte: startDate, lte: endDate },
+          ...clickedAtFilter,
           device: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+
+      // Top browsers
+      this.prisma.linkAnalytics.groupBy({
+        by: ['browser'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          browser: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+
+      // Top operating systems
+      this.prisma.linkAnalytics.groupBy({
+        by: ['os'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          os: { not: null },
         },
         _count: { id: true },
         orderBy: { _count: { id: 'desc' } },
@@ -1029,7 +1257,7 @@ export class LinkService {
         by: ['referrerDomain'],
         where: {
           link: { userId },
-          clickedAt: { gte: startDate, lte: endDate },
+          ...clickedAtFilter,
           referrerDomain: { not: null },
         },
         _count: { id: true },
@@ -1037,20 +1265,8 @@ export class LinkService {
         take: 5,
       }),
 
-      // Clicks by date for best day
-      this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
-        SELECT
-          DATE("clickedAt") as date,
-          COUNT(*)::bigint as count
-        FROM "LinkAnalytics" la
-        JOIN "Link" l ON la."linkId" = l.id
-        WHERE l."userId" = ${userId}
-          AND la."clickedAt" >= ${startDate}
-          AND la."clickedAt" <= ${endDate}
-        GROUP BY DATE("clickedAt")
-        ORDER BY count DESC
-        LIMIT 1
-      `,
+      // Clicks by date (filtered by range or limited to recent days)
+      clicksByDateQuery,
     ]);
 
     // Get unique clicks for top links
@@ -1061,11 +1277,12 @@ export class LinkService {
           const uniqueClicks = await this.prisma.linkAnalytics.count({
             where: {
               link: { shortCode: link.shortCode },
-              clickedAt: { gte: startDate, lte: endDate },
+              ...clickedAtFilter,
               isUnique: true,
             },
           });
           return {
+            id: link.id,
             shortCode: link.shortCode,
             title: link.title ?? undefined,
             clicks: link._count.analytics,
@@ -1088,6 +1305,27 @@ export class LinkService {
           : 0,
     }));
 
+    const totalBrowserClicks = topBrowsersRaw.reduce(
+      (sum, b) => sum + b._count.id,
+      0,
+    );
+    const topBrowsers: TopBrowserData[] = topBrowsersRaw.map((b) => ({
+      browser: b.browser ?? 'Unknown',
+      clicks: b._count.id,
+      percentage:
+        totalBrowserClicks > 0
+          ? Math.round((b._count.id / totalBrowserClicks) * 100)
+          : 0,
+    }));
+
+    const totalOsClicks = topOsRaw.reduce((sum, o) => sum + o._count.id, 0);
+    const topOs: TopOSData[] = topOsRaw.map((o) => ({
+      os: o.os ?? 'Unknown',
+      clicks: o._count.id,
+      percentage:
+        totalOsClicks > 0 ? Math.round((o._count.id / totalOsClicks) * 100) : 0,
+    }));
+
     const topCountries: TopCountryData[] = topCountriesRaw.map((c) => ({
       country: c.country ?? 'Unknown',
       clicks: c._count.id,
@@ -1098,13 +1336,27 @@ export class LinkService {
       clicks: r._count.id,
     }));
 
+    // Format clicks by date for timeline chart
+    const clicksByDate = clicksByDateRaw
+      .filter((row) => row.date != null)
+      .map((row) => ({
+        date: row.date.toISOString().split('T')[0]!,
+        count: Number(row.count),
+      }));
+
+    // Calculate best day from clicksByDate (highest count)
     const bestDay =
-      clicksByDateRaw.length > 0 && clicksByDateRaw[0]
-        ? {
-            date: clicksByDateRaw[0].date.toISOString().split('T')[0]!,
-            clicks: Number(clicksByDateRaw[0].count),
-          }
+      clicksByDate.length > 0
+        ? clicksByDate.reduce(
+            (best, current) => (current.count > best.count ? current : best),
+            clicksByDate[0]!,
+          )
         : undefined;
+
+    // Convert bestDay format to match interface (count -> clicks)
+    const bestDayFormatted = bestDay
+      ? { date: bestDay.date, clicks: bestDay.count }
+      : undefined;
 
     return {
       totalClicks,
@@ -1115,8 +1367,289 @@ export class LinkService {
       topLinks,
       topCountries,
       topDevices,
+      topBrowsers,
+      topOs,
       topReferrers,
-      bestDay,
+      bestDay: bestDayFormatted,
+      clicksByDate,
+    };
+  }
+
+  /**
+   * Get aggregated monthly analytics for all of a user's links (for cron/monthly reports)
+   * Used by monthly report cron - runs all queries in parallel for efficiency
+   *
+   * NOTE: This method is used by the monthly report cron job and expects specific date ranges.
+   * For the API dashboard with optional dates, use getGlobalAnalytics() instead.
+   */
+  async getUserMonthlyAnalytics(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<UserMonthlyAnalytics> {
+    // Previous month date range for growth calculation (month-based, NOT 30-day)
+    const prevMonthStart = new Date(startDate);
+    prevMonthStart.setMonth(prevMonthStart.getMonth() - 1);
+    const prevMonthEnd = new Date(endDate);
+    prevMonthEnd.setMonth(prevMonthEnd.getMonth() - 1);
+
+    const clickedAtFilter = {
+      clickedAt: { gte: startDate, lte: endDate },
+    };
+
+    const createdAtFilter = {
+      createdAt: { gte: startDate, lte: endDate },
+    };
+
+    const [
+      totalClicks,
+      uniqueVisitorsResult,
+      totalActiveLinks,
+      linksCreatedThisMonth,
+      previousMonthClicks,
+      topLinksRaw,
+      topCountriesRaw,
+      topDevicesRaw,
+      topBrowsersRaw,
+      topOsRaw,
+      topReferrersRaw,
+      clicksByDateRaw,
+    ] = await Promise.all([
+      // Total clicks
+      this.prisma.linkAnalytics.count({
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+        },
+      }),
+
+      // Unique visitors
+      this.prisma.linkAnalytics.groupBy({
+        by: ['visitorId'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          isUnique: true,
+        },
+      }),
+
+      // Total active links
+      this.prisma.link.count({
+        where: { userId, isArchived: false },
+      }),
+
+      // Links created
+      this.prisma.link.count({
+        where: {
+          userId,
+          ...createdAtFilter,
+        },
+      }),
+
+      // Previous month clicks for growth calculation
+      this.prisma.linkAnalytics.count({
+        where: {
+          link: { userId },
+          clickedAt: { gte: prevMonthStart, lte: prevMonthEnd },
+        },
+      }),
+
+      // Top 5 performing links
+      this.prisma.link.findMany({
+        where: { userId, isArchived: false },
+        select: {
+          id: true,
+          shortCode: true,
+          title: true,
+          _count: {
+            select: {
+              analytics: { where: clickedAtFilter },
+            },
+          },
+        },
+        orderBy: { analytics: { _count: 'desc' } },
+        take: 5,
+      }),
+
+      // Top 5 countries
+      this.prisma.linkAnalytics.groupBy({
+        by: ['country'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          country: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+
+      // Top devices
+      this.prisma.linkAnalytics.groupBy({
+        by: ['device'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          device: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+
+      // Top browsers
+      this.prisma.linkAnalytics.groupBy({
+        by: ['browser'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          browser: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+
+      // Top operating systems
+      this.prisma.linkAnalytics.groupBy({
+        by: ['os'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          os: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+
+      // Top 5 referrers
+      this.prisma.linkAnalytics.groupBy({
+        by: ['referrerDomain'],
+        where: {
+          link: { userId },
+          ...clickedAtFilter,
+          referrerDomain: { not: null },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+
+      // Clicks by date
+      this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+        SELECT
+          DATE("clickedAt") as date,
+          COUNT(*)::bigint as count
+        FROM "LinkAnalytics" la
+        JOIN "Link" l ON la."linkId" = l.id
+        WHERE l."userId" = ${userId}
+          AND la."clickedAt" >= ${startDate}
+          AND la."clickedAt" <= ${endDate}
+        GROUP BY DATE("clickedAt")
+        ORDER BY date ASC
+      `,
+    ]);
+
+    // Get unique clicks for top links
+    const topLinks: TopLinkData[] = await Promise.all(
+      topLinksRaw
+        .filter((l) => l._count.analytics > 0)
+        .map(async (link) => {
+          const uniqueClicks = await this.prisma.linkAnalytics.count({
+            where: {
+              link: { shortCode: link.shortCode },
+              ...clickedAtFilter,
+              isUnique: true,
+            },
+          });
+          return {
+            id: link.id,
+            shortCode: link.shortCode,
+            title: link.title ?? undefined,
+            clicks: link._count.analytics,
+            uniqueClicks,
+          };
+        }),
+    );
+
+    // Calculate device percentages
+    const totalDeviceClicks = topDevicesRaw.reduce(
+      (sum, d) => sum + d._count.id,
+      0,
+    );
+    const topDevices: TopDeviceData[] = topDevicesRaw.map((d) => ({
+      device: d.device ?? 'Unknown',
+      clicks: d._count.id,
+      percentage:
+        totalDeviceClicks > 0
+          ? Math.round((d._count.id / totalDeviceClicks) * 100)
+          : 0,
+    }));
+
+    const totalBrowserClicks = topBrowsersRaw.reduce(
+      (sum, b) => sum + b._count.id,
+      0,
+    );
+    const topBrowsers: TopBrowserData[] = topBrowsersRaw.map((b) => ({
+      browser: b.browser ?? 'Unknown',
+      clicks: b._count.id,
+      percentage:
+        totalBrowserClicks > 0
+          ? Math.round((b._count.id / totalBrowserClicks) * 100)
+          : 0,
+    }));
+
+    const totalOsClicks = topOsRaw.reduce((sum, o) => sum + o._count.id, 0);
+    const topOs: TopOSData[] = topOsRaw.map((o) => ({
+      os: o.os ?? 'Unknown',
+      clicks: o._count.id,
+      percentage:
+        totalOsClicks > 0 ? Math.round((o._count.id / totalOsClicks) * 100) : 0,
+    }));
+
+    const topCountries: TopCountryData[] = topCountriesRaw.map((c) => ({
+      country: c.country ?? 'Unknown',
+      clicks: c._count.id,
+    }));
+
+    const topReferrers: TopReferrerData[] = topReferrersRaw.map((r) => ({
+      referrer: r.referrerDomain ?? 'Direct',
+      clicks: r._count.id,
+    }));
+
+    // Format clicks by date
+    const clicksByDate = clicksByDateRaw
+      .filter((row) => row.date != null)
+      .map((row) => ({
+        date: row.date.toISOString().split('T')[0]!,
+        count: Number(row.count),
+      }));
+
+    // Calculate best day
+    const bestDay =
+      clicksByDate.length > 0
+        ? clicksByDate.reduce(
+            (best, current) => (current.count > best.count ? current : best),
+            clicksByDate[0]!,
+          )
+        : undefined;
+
+    const bestDayFormatted = bestDay
+      ? { date: bestDay.date, clicks: bestDay.count }
+      : undefined;
+
+    return {
+      totalClicks,
+      uniqueVisitors: uniqueVisitorsResult.length,
+      totalActiveLinks,
+      linksCreatedThisMonth,
+      previousMonthClicks,
+      topLinks,
+      topCountries,
+      topDevices,
+      topBrowsers,
+      topOs,
+      topReferrers,
+      bestDay: bestDayFormatted,
+      clicksByDate,
     };
   }
 

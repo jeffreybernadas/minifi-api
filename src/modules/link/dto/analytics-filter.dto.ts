@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsOptional, IsString } from 'class-validator';
 import { OffsetPageOptionsDto } from '@/common/dto/offset-pagination';
 
 export class AnalyticsFilterDto extends OffsetPageOptionsDto {
@@ -17,4 +17,14 @@ export class AnalyticsFilterDto extends OffsetPageOptionsDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by start date (ISO string)' })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by end date (ISO string)' })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }

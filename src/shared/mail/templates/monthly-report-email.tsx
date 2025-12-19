@@ -326,18 +326,20 @@ MonthlyReportEmailTemplate.PreviewProps = {
   growthPercentage: 15,
   topLinks: [
     {
+      id: 'link_1',
       shortCode: 'abc1234',
       title: 'Product Launch',
       clicks: 1234,
       uniqueClicks: 856,
     },
     {
+      id: 'link_2',
       shortCode: 'xyz5678',
       title: 'Blog Post',
       clicks: 890,
       uniqueClicks: 654,
     },
-    { shortCode: 'def9012', clicks: 567, uniqueClicks: 432 },
+    { id: 'link_3', shortCode: 'def9012', clicks: 567, uniqueClicks: 432 },
   ],
   topCountries: [
     { country: 'United States', clicks: 2345 },

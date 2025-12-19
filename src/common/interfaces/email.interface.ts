@@ -48,6 +48,7 @@ export interface WelcomeEmailProps {
 }
 
 export interface TopLinkData {
+  id: string;
   shortCode: string;
   title?: string;
   clicks: number;
@@ -65,9 +66,26 @@ export interface TopDeviceData {
   percentage: number;
 }
 
+export interface TopBrowserData {
+  browser: string;
+  clicks: number;
+  percentage: number;
+}
+
+export interface TopOSData {
+  os: string;
+  clicks: number;
+  percentage: number;
+}
+
 export interface TopReferrerData {
   referrer: string;
   clicks: number;
+}
+
+export interface ClicksByDateData {
+  date: string;
+  count: number;
 }
 
 export interface MonthlyReportEmailProps {
@@ -103,8 +121,11 @@ export interface UserMonthlyAnalytics {
   topLinks: TopLinkData[];
   topCountries: TopCountryData[];
   topDevices: TopDeviceData[];
+  topBrowsers: TopBrowserData[];
+  topOs: TopOSData[];
   topReferrers: TopReferrerData[];
   bestDay?: { date: string; clicks: number };
+  clicksByDate: ClicksByDateData[];
 }
 
 export interface SubscriptionEmailProps {
