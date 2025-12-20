@@ -1,7 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
+  BadRequestException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -38,7 +38,7 @@ export class UsageLimitGuard implements CanActivate {
     });
 
     if (activeCount >= 25) {
-      throw new ForbiddenException(
+      throw new BadRequestException(
         'Free plan limit reached: 25 active links. Upgrade to PRO for unlimited links and advanced features.',
       );
     }
