@@ -6,13 +6,15 @@ import {
 import { WEBSOCKET_CONFIGURATION_OPTIONS } from '@/constants/websocket.constant';
 import { WebSocketService } from './websocket.service';
 import { WebSocketGateway } from './websocket.gateway';
+import { KeycloakAuthService } from '@/shared/keycloak/keycloak-auth.service';
 
 /**
  * Global WebSocket module providing Socket.IO functionality with Redis adapter
+ * Uses KeycloakAuthService which has access to KEYCLOAK_INSTANCE from global AppModule
  */
 @Global()
 @Module({
-  providers: [WebSocketService, WebSocketGateway],
+  providers: [WebSocketService, WebSocketGateway, KeycloakAuthService],
   exports: [WebSocketService, WebSocketGateway],
 })
 export class WebSocketModule {
@@ -24,7 +26,7 @@ export class WebSocketModule {
 
     return {
       module: WebSocketModule,
-      providers: [websocketModuleOptions],
+      providers: [websocketModuleOptions, KeycloakAuthService],
       exports: [WebSocketService, WebSocketGateway],
     };
   }
@@ -38,8 +40,8 @@ export class WebSocketModule {
 
     return {
       module: WebSocketModule,
-      imports: options.imports,
-      providers: [websocketModuleOptions],
+      imports: options.imports || [],
+      providers: [websocketModuleOptions, KeycloakAuthService],
       exports: [WebSocketService, WebSocketGateway],
     };
   }

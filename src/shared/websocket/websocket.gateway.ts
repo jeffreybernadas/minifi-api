@@ -14,6 +14,7 @@ import { WebSocketService } from './websocket.service';
 import { UseFilters } from '@nestjs/common';
 import { ExceptionsFilter } from '@/filters/exceptions.filter';
 import { WEBSOCKET_EVENTS } from '@/constants/websocket.constant';
+import { KeycloakAuthService } from '@/shared/keycloak/keycloak-auth.service';
 
 /**
  * Main WebSocket gateway handling connections and system events
@@ -35,6 +36,7 @@ export class WebSocketGateway
   constructor(
     private readonly logger: LoggerService,
     private readonly websocketService: WebSocketService,
+    private readonly keycloakAuthService: KeycloakAuthService,
   ) {}
 
   /**
@@ -48,7 +50,7 @@ export class WebSocketGateway
   /**
    * Handle new client connections
    */
-  handleConnection(client: Socket): void {
+  async handleConnection(client: Socket): Promise<void> {
     const socketId = client.id;
     const clientAddress = client.handshake.address;
 
@@ -56,6 +58,13 @@ export class WebSocketGateway
       socketId,
       clientAddress,
     });
+
+    const token = client.handshake.auth?.token;
+    const isAuthenticated = await this.authenticateSocket(client, token);
+    if (!isAuthenticated) {
+      client.disconnect(true);
+      return;
+    }
 
     // Emit connection success to client
     client.emit(WEBSOCKET_EVENTS.CONNECTED, {
@@ -94,30 +103,62 @@ export class WebSocketGateway
    * Handle authentication events (placeholder for future Keycloak integration)
    */
   @SubscribeMessage(WEBSOCKET_EVENTS.AUTHENTICATE)
-  handleAuthenticate(
+  async handleAuthenticate(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { token?: string; userId?: string },
-  ): void {
-    // TODO: Implement Keycloak token validation when auth is added
-    if (payload.userId) {
-      this.websocketService.emitToClient(
-        client,
-        WEBSOCKET_EVENTS.AUTHENTICATED,
-        {
-          message: 'Authentication successful',
-          userId: payload.userId,
-        },
-      );
-    } else {
+    @MessageBody() payload: { token?: string },
+  ): Promise<void> {
+    await this.authenticateSocket(client, payload.token);
+  }
+
+  private async authenticateSocket(
+    client: Socket,
+    token?: string,
+  ): Promise<boolean> {
+    if (!token) {
       this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.ERROR, {
         success: false,
         statusCode: 401,
         timestamp: new Date().toISOString(),
         error: {
           code: 'WS_AUTHENTICATION_REQUIRED',
-          message: 'User ID is required for authentication',
+          message: 'Access token is required for authentication',
         },
       });
+      return false;
+    }
+
+    try {
+      const user = await this.keycloakAuthService.validateToken(token);
+
+      if (!user?.sub) {
+        throw new Error('Invalid or expired token');
+      }
+
+      client.data.user = user;
+      this.websocketService.emitToClient(
+        client,
+        WEBSOCKET_EVENTS.AUTHENTICATED,
+        {
+          message: 'Authentication successful',
+          userId: user.sub,
+        },
+      );
+      return true;
+    } catch (err) {
+      this.logger.warn('WebSocket authentication failed', 'WebSocketGateway', {
+        socketId: client.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.ERROR, {
+        success: false,
+        statusCode: 401,
+        timestamp: new Date().toISOString(),
+        error: {
+          code: 'WS_AUTHENTICATION_FAILED',
+          message: 'Invalid or expired access token',
+        },
+      });
+      return false;
     }
   }
 

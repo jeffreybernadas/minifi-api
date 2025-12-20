@@ -229,6 +229,12 @@ import openaiConfig from '@/config/openai/openai.config';
     ApmInit,
     ElasticInit,
   ],
-  exports: [CacheService, LoggerService, RabbitMQModule, StripeModule],
+  exports: [
+    CacheService,
+    LoggerService,
+    RabbitMQModule,
+    StripeModule,
+    KeycloakConnectModule,
+  ],
 })
 export class AppModule {}
