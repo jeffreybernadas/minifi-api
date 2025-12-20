@@ -18,33 +18,15 @@ import {
 } from '@/common/dto/cursor-pagination';
 import { cursorPaginateWithPrisma } from '@/utils/pagination/prisma-pagination.util';
 import { Order } from '@/constants/app.constant';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
+    private readonly configService: ConfigService,
   ) {}
-
-  /**
-   * Get the admin user from the database
-   * Used for PRO-to-admin chat feature
-   * @returns Admin user record
-   * @throws NotFoundException if no admin user exists
-   */
-  async getAdminUser() {
-    const admin = await this.prisma.user.findFirst({
-      where: { isAdmin: true },
-    });
-
-    if (!admin) {
-      throw new NotFoundException(
-        'Admin user not found. Please contact support.',
-      );
-    }
-
-    return admin;
-  }
 
   /**
    * Create a new DIRECT chat with admin
@@ -68,11 +50,10 @@ export class ChatService {
       );
     }
 
-    // Get admin user - auto-inject as chat member
-    const admin = await this.getAdminUser();
+    const adminId = this.configService.getOrThrow('app.adminUserId');
 
     // Check if creator is trying to chat with themselves (edge case: admin is PRO user)
-    if (admin.id === creatorId) {
+    if (adminId === creatorId) {
       throw new BadRequestException(
         'Admin cannot create a support chat with themselves.',
       );
@@ -84,7 +65,7 @@ export class ChatService {
         type: ChatType.DIRECT,
         AND: [
           { members: { some: { userId: creatorId } } },
-          { members: { some: { userId: admin.id } } },
+          { members: { some: { userId: adminId } } },
         ],
       },
       include: {
@@ -125,7 +106,7 @@ export class ChatService {
       // Prepare member data: creator + admin
       const memberData = [
         { chatId: newChat.id, userId: creatorId },
-        { chatId: newChat.id, userId: admin.id },
+        { chatId: newChat.id, userId: adminId },
       ];
 
       // Create all members

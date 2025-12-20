@@ -9,4 +9,5 @@ export type AppConfig = {
   frontendUrl: string;
   port: number;
   enableUrlScan: boolean;
+  adminUserId: string;
 };

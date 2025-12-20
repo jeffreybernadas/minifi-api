@@ -51,6 +51,10 @@ class EnvironmentVariablesValidator {
   @IsBoolean()
   @IsOptional()
   ENABLE_URL_SCAN: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  ADMIN_USER_ID: string;
 }
 
 export function getConfig(): AppConfig {
@@ -65,6 +69,7 @@ export function getConfig(): AppConfig {
     frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     port,
     enableUrlScan: process.env.ENABLE_URL_SCAN === 'true',
+    adminUserId: process.env.ADMIN_USER_ID as string,
   };
 }
 
