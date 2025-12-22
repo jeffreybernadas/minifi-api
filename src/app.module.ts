@@ -6,6 +6,7 @@ import appConfig from '@/config/app/app.config';
 import { DatabaseModule } from '@/database/database.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
+import Redis from 'ioredis';
 import { CacheService } from '@/shared/cache/cache.service';
 import { LoggerService } from '@/shared/logger/logger.service';
 import { APP_INTERCEPTOR, APP_GUARD, APP_FILTER } from '@nestjs/core';
@@ -85,6 +86,24 @@ import openaiConfig from '@/config/openai/openai.config';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const redis = new Redis(config.get('redis.url') as string, {
+          keepAlive: 30000, // Send keepalive probe every 30 seconds
+          connectTimeout: 10000, // 10 second connection timeout
+          maxRetriesPerRequest: 3,
+          retryStrategy: (times) => {
+            if (times > 10) {
+              return null; // Stop retrying after 10 attempts
+            }
+            return Math.min(times * 100, 3000); // Exponential backoff, max 3s
+          },
+          lazyConnect: false, // Connect immediately
+        });
+
+        // Attach error handler to prevent unhandled error events
+        redis.on('error', (err) => {
+          console.error('[ioredis:throttler] Redis error:', err.message);
+        });
+
         return {
           throttlers: [
             {
@@ -92,7 +111,7 @@ import openaiConfig from '@/config/openai/openai.config';
               limit: 150,
             },
           ],
-          storage: new ThrottlerStorageRedisService(config.get('redis.url')),
+          storage: new ThrottlerStorageRedisService(redis),
         };
       },
     }),
@@ -113,6 +132,10 @@ import openaiConfig from '@/config/openai/openai.config';
           password: config.get('redis.password'),
           ttl: 60000,
           no_read_check: true,
+          // Enable TCP keepalive to prevent connection timeouts during idle periods
+          socket_keepalive: true,
+          socket_initial_delay: 30000, // 30 seconds keepalive interval
+          connect_timeout: 10000, // 10 second connection timeout
           retry_strategy: (options: { attempt: number }) => {
             if (options.attempt > 10) {
               return new Error('Redis cache max retries reached');

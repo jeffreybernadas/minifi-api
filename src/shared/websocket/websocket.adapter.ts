@@ -35,11 +35,15 @@ export class WebSocketRedisAdapter extends IoAdapter {
       infer: true,
     });
 
-    // Create Redis clients for pub/sub with reconnect strategy
+    // Create Redis clients for pub/sub with reconnect strategy and keepAlive
     this.pubClient = createClient({
       socket: {
         host: redisHost,
         port: redisPort,
+        // Enable TCP keepalive to prevent connection timeouts during idle periods
+        keepAlive: true,
+        keepAliveInitialDelay: 30000, // Send keepalive probe every 30 seconds
+        connectTimeout: 10000, // 10 second connection timeout
         reconnectStrategy: (retries) => {
           if (retries > 10) {
             return new Error('Redis pub client max retries reached');
