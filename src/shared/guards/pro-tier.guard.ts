@@ -25,6 +25,17 @@ export class ProTierGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
+    // Admin users can bypass subscription check
+    const realmRoles = user.realm_access?.roles ?? [];
+    const resourceRoles = user.resource_access?.['minifi']?.roles ?? [];
+    const allRoles = [...realmRoles, ...resourceRoles];
+    const isAdmin =
+      allRoles.includes('admin') || allRoles.includes('superadmin');
+
+    if (isAdmin) {
+      return true;
+    }
+
     const subscription = await this.subscriptionService.getOrCreateSubscription(
       user.sub,
     );
