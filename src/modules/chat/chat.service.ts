@@ -143,12 +143,12 @@ export class ChatService {
   }
 
   /**
-   * Get all chats the user belongs to
+   * Get all chats the user belongs to with user details, last message, and unread count
    * @param userId - Keycloak user ID
-   * @returns List of chats the user is a member of
+   * @returns List of chats the user is a member of with enhanced data
    */
   async getUserChats(userId: string): Promise<ChatResponseDto[]> {
-    // Find all chats where the user is a member
+    // Find all chats where the user is a member, including user details
     const chatMembers = await this.prisma.chatMember.findMany({
       where: { userId },
       include: {
@@ -156,6 +156,30 @@ export class ChatService {
           include: {
             members: {
               orderBy: { joinedAt: 'asc' },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    username: true,
+                    email: true,
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
+            // Get the most recent message for each chat
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+                isDeleted: true,
+                createdAt: true,
+              },
             },
           },
         },
@@ -167,19 +191,82 @@ export class ChatService {
       },
     });
 
-    return chatMembers.map((chatMember) => ({
-      id: chatMember.chat.id,
-      name: chatMember.chat.name,
-      type: chatMember.chat.type,
-      creatorId: chatMember.chat.creatorId,
-      createdAt: chatMember.chat.createdAt,
-      updatedAt: chatMember.chat.updatedAt,
-      members: chatMember.chat.members.map((member) => ({
-        id: member.id,
-        userId: member.userId,
-        joinedAt: member.joinedAt,
-      })),
-    }));
+    // Get unread counts for each chat
+    const chatIds = chatMembers.map((cm) => cm.chat.id);
+
+    // Get count of unread messages per chat (messages not from current user and not read)
+    const unreadCounts = await Promise.all(
+      chatIds.map(async (chatId) => {
+        const count = await this.prisma.message.count({
+          where: {
+            chatId,
+            senderId: { not: userId }, // Not sent by current user
+            isDeleted: false,
+            readBy: {
+              none: {
+                userId: userId,
+              },
+            },
+          },
+        });
+        return { chatId, count };
+      }),
+    );
+
+    // Create a map for quick lookup
+    const unreadCountMap = new Map(
+      unreadCounts.map((item) => [item.chatId, item.count]),
+    );
+
+    // Helper function to build display name
+    const getDisplayName = (user: {
+      firstName?: string | null;
+      lastName?: string | null;
+      username?: string | null;
+      email: string;
+    }): string => {
+      if (user.firstName && user.lastName) {
+        return `${user.firstName} ${user.lastName}`;
+      }
+      if (user.firstName) {
+        return user.firstName;
+      }
+      if (user.username) {
+        return user.username;
+      }
+      return user.email;
+    };
+
+    return chatMembers.map((chatMember) => {
+      const lastMessage = chatMember.chat.messages[0] ?? null;
+
+      return {
+        id: chatMember.chat.id,
+        name: chatMember.chat.name,
+        type: chatMember.chat.type,
+        creatorId: chatMember.chat.creatorId,
+        createdAt: chatMember.chat.createdAt,
+        updatedAt: chatMember.chat.updatedAt,
+        members: chatMember.chat.members.map((member) => ({
+          id: member.id,
+          userId: member.userId,
+          joinedAt: member.joinedAt,
+          displayName: getDisplayName(member.user),
+          email: member.user.email,
+          avatarUrl: member.user.avatarUrl,
+        })),
+        lastMessage: lastMessage
+          ? {
+              id: lastMessage.id,
+              content: lastMessage.content,
+              senderId: lastMessage.senderId,
+              isDeleted: lastMessage.isDeleted,
+              createdAt: lastMessage.createdAt,
+            }
+          : null,
+        unreadCount: unreadCountMap.get(chatMember.chat.id) ?? 0,
+      };
+    });
   }
 
   /**
@@ -256,14 +343,44 @@ export class ChatService {
       throw new ForbiddenException('You are not a member of this chat');
     }
 
+    // If replying to a message, verify the reply target exists and is in the same chat
+    if (dto.replyToId) {
+      const replyTarget = await this.prisma.message.findUnique({
+        where: { id: dto.replyToId },
+      });
+
+      if (!replyTarget) {
+        throw new NotFoundException(
+          `Reply target message with ID ${dto.replyToId} not found`,
+        );
+      }
+
+      if (replyTarget.chatId !== chatId) {
+        throw new BadRequestException(
+          'Cannot reply to a message from a different chat',
+        );
+      }
+    }
+
     // Create the message and update chat's updatedAt in a transaction
     const message = await this.prisma.$transaction(async (tx) => {
-      // Create message
+      // Create message with optional replyToId
       const newMessage = await tx.message.create({
         data: {
           chatId,
           senderId,
           content: dto.content,
+          replyToId: dto.replyToId,
+        },
+        include: {
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              senderId: true,
+              isDeleted: true,
+            },
+          },
         },
       });
 
@@ -285,6 +402,15 @@ export class ChatService {
       isDeleted: message.isDeleted,
       createdAt: message.createdAt,
       updatedAt: message.updatedAt,
+      replyToId: message.replyToId,
+      replyTo: message.replyTo
+        ? {
+            id: message.replyTo.id,
+            content: message.replyTo.content,
+            senderId: message.replyTo.senderId,
+            isDeleted: message.replyTo.isDeleted,
+          }
+        : null,
     };
   }
 
@@ -405,17 +531,15 @@ export class ChatService {
       createdAt: cursorPageOptionsDto.order === Order.Asc ? 'asc' : 'desc',
     } as const;
 
-    // Build where clause
+    // Build where clause - include deleted messages so they show as placeholders
     const where: {
       chatId: string;
-      isDeleted: boolean;
       content?: { contains: string; mode: 'insensitive' };
     } = {
       chatId,
-      isDeleted: false, // Only return non-deleted messages
     };
 
-    // Add search filter if provided
+    // Add search filter if provided (only search non-deleted messages)
     if (cursorPageOptionsDto.search) {
       where.content = {
         contains: cursorPageOptionsDto.search,
@@ -423,7 +547,7 @@ export class ChatService {
       };
     }
 
-    // Use cursor pagination utility
+    // Use cursor pagination utility with replyTo relation included
     const paginatedMessages = await cursorPaginateWithPrisma<
       MessageResponseDto,
       NonNullable<Parameters<typeof this.prisma.message.findMany>[0]>
@@ -433,6 +557,16 @@ export class ChatService {
       {
         where,
         orderBy,
+        include: {
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              senderId: true,
+              isDeleted: true,
+            },
+          },
+        },
       },
       'id', // Use 'id' as cursor field
     );

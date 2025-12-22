@@ -5,9 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-  schema   = "minifi"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  schema       = "minifi"
   moduleFormat = "cjs"
 }
 
@@ -49,15 +49,16 @@ enum SubscriptionStatus {
   INCOMPLETE
   TRIALING
 }
+
 model User {
   id String @id // Keycloak sub (UUID) - NOT auto-generated
 
   // From keycloak
-  email         String  @unique
-  username      String? // preferred_username from Keycloak
-  firstName     String? // given_name from Keycloak
-  lastName      String? // family_name from Keycloak
-  emailVerified Boolean @default(false)
+  email                     String  @unique
+  username                  String? // preferred_username from Keycloak
+  firstName                 String? // given_name from Keycloak
+  lastName                  String? // family_name from Keycloak
+  emailVerified             Boolean @default(false)
   emailNotificationsEnabled Boolean @default(true)
 
   // Additional profile fields (managed by application)
@@ -66,10 +67,13 @@ model User {
   address     String?
 
   // URL shortener
-  userType UserType @default(FREE)
-  links    Link[]
-  tags     Tag[]
+  userType     UserType      @default(FREE)
+  links        Link[]
+  tags         Tag[]
   subscription Subscription?
+
+  // Chat relations
+  chatMemberships ChatMember[]
 
   // Admin moderation
   isBlocked     Boolean   @default(false)
@@ -115,6 +119,7 @@ model ChatMember {
   joinedAt DateTime @default(now())
 
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([chatId, userId])
   @@index([userId])
@@ -128,6 +133,7 @@ model Message {
   content   String  @db.Text
   isEdited  Boolean @default(false)
   isDeleted Boolean @default(false)
+  replyToId String? // ID of the message being replied to
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -135,8 +141,13 @@ model Message {
   chat   Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
   readBy MessageRead[]
 
+  // Reply-to self-relation
+  replyTo Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies Message[] @relation("MessageReplies")
+
   @@index([chatId, createdAt])
   @@index([senderId])
+  @@index([replyToId])
 }
 
 model MessageRead {
@@ -155,7 +166,7 @@ model MessageRead {
 
 model Link {
   id          String     @id @default(uuid())
-  userId      String?    // NULLABLE for guest users
+  userId      String? // NULLABLE for guest users
   originalUrl String     @db.Text
   shortCode   String     @unique
   customAlias String?    @unique
@@ -164,16 +175,16 @@ model Link {
   status      LinkStatus @default(ACTIVE)
 
   // Guest user tracking
-  isGuest         Boolean @default(false)
-  guestIpAddress  String? @db.VarChar(45) // For rate limiting
-  guestUserAgent  String? @db.Text        // For analytics
+  isGuest        Boolean @default(false)
+  guestIpAddress String? @db.VarChar(45) // For rate limiting
+  guestUserAgent String? @db.Text // For analytics
 
   // Scan metadata (URL safety)
-  scanStatus ScanStatus @default(PENDING)
-  scanScore  Float?
-  scannedAt  DateTime?
-  scanDetails Json?
-  lastScanVersion String? @db.VarChar(50)
+  scanStatus      ScanStatus @default(PENDING)
+  scanScore       Float?
+  scannedAt       DateTime?
+  scanDetails     Json?
+  lastScanVersion String?    @db.VarChar(50)
 
   // Advanced features
   password    String?
@@ -263,13 +274,13 @@ model Tag {
   name   String @db.VarChar(50)
 
   // UI Colors - separate background and text for better contrast
-  backgroundColor String @db.VarChar(7) @default("#3B82F6")
-  textColor       String @db.VarChar(7) @default("#FFFFFF")
+  backgroundColor String @default("#3B82F6") @db.VarChar(7)
+  textColor       String @default("#FFFFFF") @db.VarChar(7)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   links LinkTag[]
 
   @@unique([userId, name])
@@ -290,10 +301,10 @@ model LinkTag {
 }
 
 model Subscription {
-  id        String             @id @default(uuid())
-  userId    String             @unique
-  tier      SubscriptionTier   @default(FREE)
-  status    SubscriptionStatus @default(ACTIVE)
+  id     String             @id @default(uuid())
+  userId String             @unique
+  tier   SubscriptionTier   @default(FREE)
+  status SubscriptionStatus @default(ACTIVE)
 
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique

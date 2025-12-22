@@ -1,4 +1,33 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+/**
+ * DTO for reply-to message context
+ */
+export class ReplyToDto {
+  @ApiProperty({
+    description: 'Original message ID',
+    example: '123e4567-e89b-12d3-a456-426614174003',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'Original message content',
+    example: 'Hello, team!',
+  })
+  content: string;
+
+  @ApiProperty({
+    description: 'Original message sender ID',
+    example: '123e4567-e89b-12d3-a456-426614174002',
+  })
+  senderId: string;
+
+  @ApiProperty({
+    description: 'Whether the original message was deleted',
+    example: false,
+  })
+  isDeleted: boolean;
+}
 
 /**
  * DTO for message response
@@ -51,4 +80,18 @@ export class MessageResponseDto {
     example: '2025-10-05T12:00:00.000Z',
   })
   updatedAt: Date;
+
+  @ApiPropertyOptional({
+    description: 'ID of the message this is replying to',
+    example: '123e4567-e89b-12d3-a456-426614174003',
+    nullable: true,
+  })
+  replyToId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Reply-to message context (populated when fetching messages)',
+    type: ReplyToDto,
+    nullable: true,
+  })
+  replyTo?: ReplyToDto | null;
 }
