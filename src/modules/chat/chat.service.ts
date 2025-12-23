@@ -218,25 +218,6 @@ export class ChatService {
       unreadCounts.map((item) => [item.chatId, item.count]),
     );
 
-    // Helper function to build display name
-    const getDisplayName = (user: {
-      firstName?: string | null;
-      lastName?: string | null;
-      username?: string | null;
-      email: string;
-    }): string => {
-      if (user.firstName && user.lastName) {
-        return `${user.firstName} ${user.lastName}`;
-      }
-      if (user.firstName) {
-        return user.firstName;
-      }
-      if (user.username) {
-        return user.username;
-      }
-      return user.email;
-    };
-
     return chatMembers.map((chatMember) => {
       const lastMessage = chatMember.chat.messages[0] ?? null;
 
@@ -251,7 +232,7 @@ export class ChatService {
           id: member.id,
           userId: member.userId,
           joinedAt: member.joinedAt,
-          displayName: getDisplayName(member.user),
+          displayName: this.getDisplayName(member.user),
           email: member.user.email,
           avatarUrl: member.user.avatarUrl,
         })),
@@ -381,6 +362,16 @@ export class ChatService {
               isDeleted: true,
             },
           },
+          sender: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              username: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
         },
       });
 
@@ -411,6 +402,14 @@ export class ChatService {
             isDeleted: message.replyTo.isDeleted,
           }
         : null,
+      sender: {
+        id: message.sender.id,
+        firstName: message.sender.firstName,
+        lastName: message.sender.lastName,
+        username: message.sender.username,
+        email: message.sender.email,
+        avatarUrl: message.sender.avatarUrl,
+      },
     };
   }
 
@@ -547,12 +546,39 @@ export class ChatService {
       };
     }
 
-    // Use cursor pagination utility with replyTo relation included
+    // Define the shape of message with included relations
+    type MessageWithRelations = {
+      id: string;
+      chatId: string;
+      senderId: string;
+      content: string;
+      isEdited: boolean;
+      isDeleted: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+      replyToId: string | null;
+      replyTo: {
+        id: string;
+        content: string;
+        senderId: string;
+        isDeleted: boolean;
+      } | null;
+      sender: {
+        id: string;
+        firstName: string | null;
+        lastName: string | null;
+        username: string | null;
+        email: string;
+        avatarUrl: string | null;
+      };
+    };
+
+    // Use cursor pagination utility with replyTo and sender relations included
     const paginatedMessages = await cursorPaginateWithPrisma<
-      MessageResponseDto,
-      NonNullable<Parameters<typeof this.prisma.message.findMany>[0]>
+      MessageWithRelations,
+      any
     >(
-      this.prisma.message,
+      this.prisma.message as any,
       cursorPageOptionsDto,
       {
         where,
@@ -566,10 +592,22 @@ export class ChatService {
               isDeleted: true,
             },
           },
+          sender: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              username: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
         },
       },
       'id', // Use 'id' as cursor field
     );
+
+    // Data already matches DTO shape, no transformation needed
 
     // Automatically mark fetched messages as read (convenience feature)
     // This ensures messages are marked as read when user opens/scrolls through chat
@@ -590,7 +628,7 @@ export class ChatService {
       });
     }
 
-    return paginatedMessages;
+    return paginatedMessages as unknown as CursorPaginatedDto<MessageResponseDto>;
   }
 
   /**
@@ -891,5 +929,26 @@ export class ChatService {
       })),
       skipDuplicates: true,
     });
+  }
+
+  /**
+   * Helper to build display name from user fields
+   */
+  private getDisplayName(user: {
+    firstName?: string | null;
+    lastName?: string | null;
+    username?: string | null;
+    email: string;
+  }): string {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.firstName) {
+      return user.firstName;
+    }
+    if (user.username) {
+      return user.username;
+    }
+    return user.email;
   }
 }

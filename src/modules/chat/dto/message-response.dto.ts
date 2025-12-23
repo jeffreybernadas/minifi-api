@@ -1,6 +1,47 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
+ * DTO for message sender info
+ */
+export class MessageSenderDto {
+  @ApiProperty({
+    description: 'Keycloak user ID',
+    example: '123e4567-e89b-12d3-a456-426614174002',
+  })
+  id: string;
+
+  @ApiPropertyOptional({
+    description: 'User first name',
+    example: 'John',
+  })
+  firstName?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'User last name',
+    example: 'Doe',
+  })
+  lastName?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Username',
+    example: 'johndoe',
+  })
+  username?: string | null;
+
+  @ApiProperty({
+    description: 'User email',
+    example: 'john@example.com',
+  })
+  email: string;
+
+  @ApiPropertyOptional({
+    description: 'User avatar URL',
+    example: 'https://example.com/avatar.jpg',
+  })
+  avatarUrl?: string | null;
+}
+
+/**
  * DTO for reply-to message context
  */
 export class ReplyToDto {
@@ -94,4 +135,11 @@ export class MessageResponseDto {
     nullable: true,
   })
   replyTo?: ReplyToDto | null;
+
+  @ApiPropertyOptional({
+    description: 'Sender user details (populated when fetching messages)',
+    type: MessageSenderDto,
+    nullable: true,
+  })
+  sender?: MessageSenderDto | null;
 }

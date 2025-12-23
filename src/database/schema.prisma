@@ -74,6 +74,7 @@ model User {
 
   // Chat relations
   chatMemberships ChatMember[]
+  messages        Message[]
 
   // Admin moderation
   isBlocked     Boolean   @default(false)
@@ -139,6 +140,7 @@ model Message {
   updatedAt DateTime @updatedAt
 
   chat   Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
   readBy MessageRead[]
 
   // Reply-to self-relation
