@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -25,11 +26,13 @@ export class AdminUserFilterDto extends OffsetPageOptionsDto {
 
   @ApiPropertyOptional({ description: 'Filter by blocked status' })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isBlocked?: boolean;
 
   @ApiPropertyOptional({ description: 'Filter by email verified status' })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   emailVerified?: boolean;
 }

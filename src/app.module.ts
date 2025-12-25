@@ -26,6 +26,7 @@ import { NestMinioModule } from '@/shared/storage/minio.module';
 import websocketConfig from '@/config/websocket/websocket.config';
 import { WebSocketModule } from '@/shared/websocket/websocket.module';
 import { UnifiedThrottlerGuard } from '@/shared/guards/unified-throttler.guard';
+import { BlockedUserGuard } from '@/shared/guards/blocked-user.guard';
 import {
   AuthGuard,
   KeycloakConnectModule,
@@ -238,6 +239,10 @@ import openaiConfig from '@/config/openai/openai.config';
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: BlockedUserGuard,
     },
     {
       provide: APP_GUARD,
