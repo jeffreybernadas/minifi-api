@@ -35,7 +35,6 @@ export const WEBSOCKET_EVENTS = {
 
   // Chat message events
   NEW_MESSAGE: 'chat:new-message',
-  MESSAGE_SENT: 'chat:message-sent',
   MESSAGE_UPDATED: 'chat:message-updated',
   MESSAGE_DELETED: 'chat:message-deleted',
 
@@ -52,16 +51,6 @@ export const WEBSOCKET_EVENTS = {
 
   // Chat member events
   USER_JOINED_CHAT: 'chat:user-joined',
-  USER_LEFT_CHAT: 'chat:user-left',
-  MEMBER_ADDED: 'chat:member-added',
-  MEMBER_REMOVED: 'chat:member-removed',
-
-  // Chat online status (chat-room scoped - legacy)
-  USER_ONLINE_IN_CHAT: 'chat:user-online',
-  USER_OFFLINE_IN_CHAT: 'chat:user-offline',
-
-  // Chat metadata
-  CHAT_UPDATED: 'chat:updated',
 
   // Global presence (user-level online status)
   GET_PRESENCE: 'get-presence',
