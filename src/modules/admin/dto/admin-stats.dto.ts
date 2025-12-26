@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class GrowthDataDto {
   @ApiProperty({ description: 'Current period value' })
@@ -112,8 +112,10 @@ export class RecentAlertDto {
   @ApiProperty({ description: 'Link ID' })
   linkId: string;
 
-  @ApiProperty({ description: 'Short code' })
-  shortCode: string;
+  @ApiPropertyOptional({
+    description: 'Short code (nullable if customAlias is used)',
+  })
+  shortCode?: string | null;
 
   @ApiProperty({ description: 'Original URL' })
   originalUrl: string;

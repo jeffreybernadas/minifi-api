@@ -4,8 +4,10 @@ export class TopLinkDataDto {
   @ApiProperty()
   id: string;
 
-  @ApiProperty()
-  shortCode: string;
+  @ApiPropertyOptional({
+    description: 'Short code (nullable when customAlias is used)',
+  })
+  shortCode?: string | null;
 
   @ApiPropertyOptional()
   title?: string;

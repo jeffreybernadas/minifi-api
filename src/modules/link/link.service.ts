@@ -122,7 +122,10 @@ export class LinkService {
       );
     }
 
-    const shortCode = await this.generateUniqueShortCode();
+    // Only generate shortCode if no customAlias is provided
+    const shortCode = dto.customAlias
+      ? undefined
+      : await this.generateUniqueShortCode();
     const passwordHash = dto.password
       ? await hashPassword(dto.password)
       : undefined;
@@ -1848,7 +1851,7 @@ export class LinkService {
       id: link.id,
       userId: link.userId,
       originalUrl: link.originalUrl,
-      shortCode: link.shortCode,
+      shortCode: link.shortCode ?? undefined,
       customAlias: link.customAlias ?? undefined,
       title: link.title ?? undefined,
       description: link.description ?? undefined,

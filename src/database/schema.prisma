@@ -170,7 +170,7 @@ model Link {
   id          String     @id @default(uuid())
   userId      String? // NULLABLE for guest users
   originalUrl String     @db.Text
-  shortCode   String     @unique
+  shortCode   String?    @unique // NULLABLE when customAlias is used
   customAlias String?    @unique
   title       String?    @db.VarChar(200)
   description String?    @db.Text

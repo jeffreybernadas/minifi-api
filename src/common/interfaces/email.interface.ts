@@ -19,7 +19,7 @@ export interface ChatUnreadDigestProps {
 
 export interface SecurityAlertEmailProps {
   originalUrl: string;
-  shortCode: string;
+  shortCode?: string | null; // Nullable when customAlias is used
   status: string;
   score?: number;
   threats: string[];
@@ -29,7 +29,7 @@ export interface SecurityAlertEmailProps {
 }
 
 export interface ExpiringLinkData {
-  shortCode: string;
+  shortCode?: string | null; // Nullable when customAlias is used
   title?: string;
   originalUrl: string;
   expiresAt: Date | string;
@@ -49,7 +49,7 @@ export interface WelcomeEmailProps {
 
 export interface TopLinkData {
   id: string;
-  shortCode: string;
+  shortCode?: string | null; // Nullable when customAlias is used
   title?: string;
   clicks: number;
   uniqueClicks: number;
@@ -146,7 +146,7 @@ export interface SubscriptionEmailProps {
  * Link scheduled for deletion data
  */
 export interface DeletingLinkData {
-  shortCode: string;
+  shortCode?: string | null; // Nullable when customAlias is used
   title?: string;
   originalUrl: string;
   createdAt: Date | string;

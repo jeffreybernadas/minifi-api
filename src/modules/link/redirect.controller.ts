@@ -63,7 +63,7 @@ export class RedirectController {
     return {
       requiresPassword: false,
       originalUrl: link.originalUrl,
-      shortCode: link.shortCode,
+      shortCode: link.shortCode ?? undefined,
       ...(warning ? { warning } : {}),
     };
   }
@@ -116,7 +116,7 @@ export class RedirectController {
     return {
       success: true,
       originalUrl: link.originalUrl,
-      shortCode: link.shortCode,
+      shortCode: link.shortCode ?? undefined,
       ...(warning ? { warning } : {}),
     };
   }
