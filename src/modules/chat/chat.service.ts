@@ -571,9 +571,13 @@ export class ChatService {
         email: string;
         avatarUrl: string | null;
       };
+      readBy: {
+        userId: string;
+        readAt: Date;
+      }[];
     };
 
-    // Use cursor pagination utility with replyTo and sender relations included
+    // Use cursor pagination utility with replyTo, sender, and readBy relations included
     const paginatedMessages = await cursorPaginateWithPrisma<
       MessageWithRelations,
       any
@@ -600,6 +604,12 @@ export class ChatService {
               username: true,
               email: true,
               avatarUrl: true,
+            },
+          },
+          readBy: {
+            select: {
+              userId: true,
+              readAt: true,
             },
           },
         },

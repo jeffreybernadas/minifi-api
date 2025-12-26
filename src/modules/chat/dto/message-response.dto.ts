@@ -42,6 +42,23 @@ export class MessageSenderDto {
 }
 
 /**
+ * DTO for message read receipt
+ */
+export class MessageReadReceiptDto {
+  @ApiProperty({
+    description: 'User ID who read the message',
+    example: '123e4567-e89b-12d3-a456-426614174002',
+  })
+  userId: string;
+
+  @ApiProperty({
+    description: 'Timestamp when the message was read',
+    example: '2025-10-05T12:00:00.000Z',
+  })
+  readAt: Date;
+}
+
+/**
  * DTO for reply-to message context
  */
 export class ReplyToDto {
@@ -142,4 +159,10 @@ export class MessageResponseDto {
     nullable: true,
   })
   sender?: MessageSenderDto | null;
+
+  @ApiPropertyOptional({
+    description: 'Read receipts for this message',
+    type: [MessageReadReceiptDto],
+  })
+  readBy?: MessageReadReceiptDto[];
 }
