@@ -47,6 +47,9 @@ export const WEBSOCKET_EVENTS = {
   MESSAGE_READ: 'chat:message-read',
   MESSAGES_READ: 'chat:messages-read',
 
+  // Chat unread notifications (sent to user's personal room)
+  UNREAD_INCREMENT: 'chat:unread-increment',
+
   // Chat member events
   USER_JOINED_CHAT: 'chat:user-joined',
   USER_LEFT_CHAT: 'chat:user-left',
