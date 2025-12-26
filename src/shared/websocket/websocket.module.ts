@@ -4,18 +4,18 @@ import {
   WebSocketOptionsAsync,
 } from '@/common/interfaces/websocket.interface';
 import { WEBSOCKET_CONFIGURATION_OPTIONS } from '@/constants/websocket.constant';
-import { WebSocketService } from './websocket.service';
+import { PresenceService } from './presence.service';
 import { WebSocketGateway } from './websocket.gateway';
-import { KeycloakAuthService } from '@/shared/keycloak/keycloak-auth.service';
+import { WebSocketService } from './websocket.service';
 
 /**
  * Global WebSocket module providing Socket.IO functionality with Redis adapter
- * Uses KeycloakAuthService which has access to KEYCLOAK_INSTANCE from global AppModule
+ * KeycloakAuthService is provided globally from KeycloakModule
  */
 @Global()
 @Module({
-  providers: [WebSocketService, WebSocketGateway, KeycloakAuthService],
-  exports: [WebSocketService, WebSocketGateway],
+  providers: [WebSocketService, WebSocketGateway, PresenceService],
+  exports: [WebSocketService, WebSocketGateway, PresenceService],
 })
 export class WebSocketModule {
   static forRoot(options: WebSocketOptions): DynamicModule {
@@ -26,8 +26,8 @@ export class WebSocketModule {
 
     return {
       module: WebSocketModule,
-      providers: [websocketModuleOptions, KeycloakAuthService],
-      exports: [WebSocketService, WebSocketGateway],
+      providers: [websocketModuleOptions, PresenceService],
+      exports: [WebSocketService, WebSocketGateway, PresenceService],
     };
   }
 
@@ -41,8 +41,8 @@ export class WebSocketModule {
     return {
       module: WebSocketModule,
       imports: options.imports || [],
-      providers: [websocketModuleOptions, KeycloakAuthService],
-      exports: [WebSocketService, WebSocketGateway],
+      providers: [websocketModuleOptions, PresenceService],
+      exports: [WebSocketService, WebSocketGateway, PresenceService],
     };
   }
 }

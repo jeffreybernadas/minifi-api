@@ -5,10 +5,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { KeycloakJWT } from '@/modules/user/interfaces/keycloak-jwt.interface';
+import type { KeycloakJWT } from '@/modules/user/interfaces/keycloak-jwt.interface';
+import { KeycloakAuthService } from '@/shared/keycloak/keycloak-auth.service';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
+  constructor(private readonly keycloakAuthService: KeycloakAuthService) {}
+
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user as KeycloakJWT | undefined;
@@ -17,13 +20,7 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException('Authentication required');
     }
 
-    const realmRoles = user.realm_access?.roles ?? [];
-    const resourceRoles = user.resource_access?.['minifi']?.roles ?? [];
-    const allRoles = [...realmRoles, ...resourceRoles];
-    const isAdmin =
-      allRoles.includes('admin') || allRoles.includes('superadmin');
-
-    if (!isAdmin) {
+    if (!this.keycloakAuthService.isAdmin(user)) {
       throw new ForbiddenException('Admin access required');
     }
 

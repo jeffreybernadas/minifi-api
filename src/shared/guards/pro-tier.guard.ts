@@ -5,8 +5,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { KeycloakJWT } from '@/modules/user/interfaces/keycloak-jwt.interface';
 import { SubscriptionService } from '@/modules/subscription/subscription.service';
-import { KeycloakJWT } from '@/modules/user/interfaces/keycloak-jwt.interface';
+import { KeycloakAuthService } from '@/shared/keycloak/keycloak-auth.service';
 
 /**
  * ProTierGuard
@@ -15,7 +16,10 @@ import { KeycloakJWT } from '@/modules/user/interfaces/keycloak-jwt.interface';
  */
 @Injectable()
 export class ProTierGuard implements CanActivate {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(
+    private readonly subscriptionService: SubscriptionService,
+    private readonly keycloakAuthService: KeycloakAuthService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
@@ -26,13 +30,7 @@ export class ProTierGuard implements CanActivate {
     }
 
     // Admin users can bypass subscription check
-    const realmRoles = user.realm_access?.roles ?? [];
-    const resourceRoles = user.resource_access?.['minifi']?.roles ?? [];
-    const allRoles = [...realmRoles, ...resourceRoles];
-    const isAdmin =
-      allRoles.includes('admin') || allRoles.includes('superadmin');
-
-    if (isAdmin) {
+    if (this.keycloakAuthService.isAdmin(user)) {
       return true;
     }
 

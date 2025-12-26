@@ -11,6 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { LoggerService } from '@/shared/logger/logger.service';
 import { WebSocketService } from './websocket.service';
+import { PresenceService } from './presence.service';
 import { UseFilters } from '@nestjs/common';
 import { ExceptionsFilter } from '@/filters/exceptions.filter';
 import { WEBSOCKET_EVENTS } from '@/constants/websocket.constant';
@@ -36,6 +37,7 @@ export class WebSocketGateway
   constructor(
     private readonly logger: LoggerService,
     private readonly websocketService: WebSocketService,
+    private readonly presenceService: PresenceService,
     private readonly keycloakAuthService: KeycloakAuthService,
   ) {}
 
@@ -66,6 +68,51 @@ export class WebSocketGateway
       return;
     }
 
+    // Track presence and broadcast status change
+    const user = client.data.user;
+    if (user?.sub) {
+      const userId = user.sub;
+      const isAdmin = this.keycloakAuthService.isAdmin(user);
+
+      // Track in Redis
+      const wasOffline = await this.presenceService.userConnected(
+        userId,
+        socketId,
+        isAdmin,
+      );
+
+      // Auto-join user's personal room
+      await client.join(`user:${userId}`);
+
+      // Auto-join admin room if admin
+      if (isAdmin) {
+        await client.join('room:admins');
+      }
+
+      // Broadcast if user came online (was offline before)
+      if (wasOffline) {
+        if (isAdmin) {
+          // Broadcast to ALL connected users that an admin came online
+          this.server.emit(WEBSOCKET_EVENTS.PRESENCE_ADMIN_ONLINE, {
+            success: true,
+            statusCode: 200,
+            timestamp: new Date().toISOString(),
+            data: { userId },
+          });
+        } else {
+          // Broadcast to admin room that this user came online
+          this.server
+            .to('room:admins')
+            .emit(WEBSOCKET_EVENTS.PRESENCE_USER_ONLINE, {
+              success: true,
+              statusCode: 200,
+              timestamp: new Date().toISOString(),
+              data: { userId },
+            });
+        }
+      }
+    }
+
     // Emit connection success to client
     client.emit(WEBSOCKET_EVENTS.CONNECTED, {
       success: true,
@@ -81,19 +128,47 @@ export class WebSocketGateway
   /**
    * Handle client disconnections
    */
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: Socket): Promise<void> {
     const socketId = client.id;
 
     this.logger.log('Client disconnected', 'WebSocketGateway', {
       socketId,
     });
+
+    // Track disconnection and broadcast if user is now fully offline
+    const result = await this.presenceService.userDisconnected(socketId);
+    if (result?.nowOffline) {
+      if (result.isAdmin) {
+        // Broadcast to ALL connected users that an admin went offline
+        this.server.emit(WEBSOCKET_EVENTS.PRESENCE_ADMIN_OFFLINE, {
+          success: true,
+          statusCode: 200,
+          timestamp: new Date().toISOString(),
+          data: { userId: result.userId },
+        });
+      } else {
+        // Broadcast to admin room that this user went offline
+        this.server
+          .to('room:admins')
+          .emit(WEBSOCKET_EVENTS.PRESENCE_USER_OFFLINE, {
+            success: true,
+            statusCode: 200,
+            timestamp: new Date().toISOString(),
+            data: { userId: result.userId },
+          });
+      }
+    }
   }
 
   /**
    * Handle ping events from clients
+   * Also refreshes presence TTL to keep user online
    */
   @SubscribeMessage(WEBSOCKET_EVENTS.PING)
-  handlePing(@ConnectedSocket() client: Socket): void {
+  async handlePing(@ConnectedSocket() client: Socket): Promise<void> {
+    // Refresh presence TTL
+    await this.presenceService.refreshPresence(client.id);
+
     this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.PONG, {
       timestamp: new Date().toISOString(),
     });
@@ -254,6 +329,43 @@ export class WebSocketGateway
           count: sockets.length,
         },
       );
+    }
+  }
+
+  /**
+   * Handle get presence event
+   * Returns online status for admins (for regular users) or specific users (for admins)
+   */
+  @SubscribeMessage(WEBSOCKET_EVENTS.GET_PRESENCE)
+  async handleGetPresence(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { userIds?: string[] },
+  ): Promise<void> {
+    const user = client.data.user;
+    if (!user?.sub) return;
+
+    const isAdmin = this.keycloakAuthService.isAdmin(user);
+
+    if (isAdmin && payload.userIds && payload.userIds.length > 0) {
+      // Admin requesting status of specific users
+      const onlineUserIds = await this.presenceService.getOnlineUserIds(
+        payload.userIds,
+      );
+      client.emit(WEBSOCKET_EVENTS.PRESENCE_STATUS, {
+        success: true,
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: { onlineUserIds },
+      });
+    } else {
+      // Regular user requesting admin status
+      const isAdminOnline = await this.presenceService.isAnyAdminOnline();
+      client.emit(WEBSOCKET_EVENTS.PRESENCE_STATUS, {
+        success: true,
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: { isAdminOnline },
+      });
     }
   }
 }

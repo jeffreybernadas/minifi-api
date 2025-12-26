@@ -56,12 +56,20 @@ export const WEBSOCKET_EVENTS = {
   MEMBER_ADDED: 'chat:member-added',
   MEMBER_REMOVED: 'chat:member-removed',
 
-  // Chat online status
+  // Chat online status (chat-room scoped - legacy)
   USER_ONLINE_IN_CHAT: 'chat:user-online',
   USER_OFFLINE_IN_CHAT: 'chat:user-offline',
 
   // Chat metadata
   CHAT_UPDATED: 'chat:updated',
+
+  // Global presence (user-level online status)
+  GET_PRESENCE: 'get-presence',
+  PRESENCE_STATUS: 'presence-status',
+  PRESENCE_USER_ONLINE: 'presence:user-online',
+  PRESENCE_USER_OFFLINE: 'presence:user-offline',
+  PRESENCE_ADMIN_ONLINE: 'presence:admin-online',
+  PRESENCE_ADMIN_OFFLINE: 'presence:admin-offline',
 } as const;
 
 /**
