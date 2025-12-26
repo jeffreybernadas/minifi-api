@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -42,11 +43,13 @@ export class AdminLinkFilterDto extends OffsetPageOptionsDto {
 
   @ApiPropertyOptional({ description: 'Filter by guest links' })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isGuest?: boolean;
 
   @ApiPropertyOptional({ description: 'Filter by archived status' })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isArchived?: boolean;
 
