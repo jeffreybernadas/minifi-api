@@ -284,21 +284,24 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Get which users from a list are currently online
+   * Uses Redis pipeline to batch all SCARD commands in a single round trip
    */
   async getOnlineUserIds(userIds: string[]): Promise<string[]> {
     if (userIds.length === 0) return [];
 
-    const onlineUserIds: string[] = [];
-
-    // Check each user's presence
+    // Use pipeline to batch all SCARD commands
+    const pipeline = this.redis.multi();
     for (const userId of userIds) {
-      const isOnline = await this.isUserOnline(userId);
-      if (isOnline) {
-        onlineUserIds.push(userId);
-      }
+      pipeline.sCard(`presence:user:${userId}`);
     }
 
-    return onlineUserIds;
+    const results = await pipeline.exec();
+
+    // Filter users who have at least one socket connected
+    return userIds.filter((_, index) => {
+      const count = Number(results[index]) || 0;
+      return count > 0;
+    });
   }
 
   /**
