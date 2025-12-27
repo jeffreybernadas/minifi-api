@@ -71,6 +71,18 @@ export class ChatService {
       include: {
         members: {
           orderBy: { joinedAt: 'asc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
+          },
         },
       },
     });
@@ -88,7 +100,11 @@ export class ChatService {
           id: member.id,
           userId: member.userId,
           joinedAt: member.joinedAt,
+          displayName: this.getDisplayName(member.user),
+          email: member.user.email,
+          avatarUrl: member.user.avatarUrl,
         })),
+        unreadCount: 0,
       };
     }
 
@@ -114,12 +130,24 @@ export class ChatService {
         data: memberData,
       });
 
-      // Fetch the created chat with members
+      // Fetch the created chat with members and user details
       const chatWithMembers = await tx.chat.findUnique({
         where: { id: newChat.id },
         include: {
           members: {
             orderBy: { joinedAt: 'asc' },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  username: true,
+                  email: true,
+                  avatarUrl: true,
+                },
+              },
+            },
           },
         },
       });
@@ -138,7 +166,11 @@ export class ChatService {
         id: member.id,
         userId: member.userId,
         joinedAt: member.joinedAt,
+        displayName: this.getDisplayName(member.user),
+        email: member.user.email,
+        avatarUrl: member.user.avatarUrl,
       })),
+      unreadCount: 0,
     };
   }
 

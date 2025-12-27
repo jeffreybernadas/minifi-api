@@ -91,17 +91,13 @@ export class ChatController {
 
     // Emit WebSocket event to notify all members about the new chat
     // Each member should be listening to their personal notification room
+    // Send full chat object so frontend can add it to the chat list
     if (chat.members) {
       chat.members.forEach((member) => {
         this.websocketService.emitToRoom(
           `user:${member.userId}`,
           WEBSOCKET_EVENTS.USER_JOINED_CHAT,
-          {
-            chatId: chat.id,
-            chatName: chat.name,
-            chatType: chat.type,
-            creatorId: chat.creatorId,
-          },
+          chat,
           { userId: member.userId },
         );
       });
