@@ -19,9 +19,12 @@ import { LoggerService } from '@/shared/logger/logger.service';
 @Injectable()
 export class PresenceService implements OnModuleInit, OnModuleDestroy {
   private redis: RedisClientType;
+  private pingInterval: NodeJS.Timeout | null = null;
 
   // TTL for presence keys (5 minutes) - refreshed by Socket.IO ping/pong
   private readonly PRESENCE_TTL_SECONDS = 300;
+  // Ping interval to keep Redis connection alive (30 seconds)
+  private readonly PING_INTERVAL_MS = 30000;
 
   constructor(
     private readonly configService: ConfigService<GlobalConfig>,
@@ -43,13 +46,21 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
         host: redisHost,
         port: redisPort,
         keepAlive: true,
-        keepAliveInitialDelay: 30000,
         connectTimeout: 10000,
         reconnectStrategy: (retries) => {
-          if (retries > 10) {
+          if (retries > 20) {
+            this.logger.error(
+              'Presence Redis max retries reached, giving up',
+              'PresenceService',
+            );
             return new Error('Presence Redis client max retries reached');
           }
-          return Math.min(retries * 100, 3000);
+          const delay = Math.min(retries * 500, 5000);
+          this.logger.warn(
+            `Presence Redis reconnecting in ${delay}ms (attempt ${retries})`,
+            'PresenceService',
+          );
+          return delay;
         },
       },
       username: redisUsername,
@@ -58,16 +69,47 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
 
     this.redis.on('error', (err) => {
       this.logger.error('Presence Redis error', 'PresenceService', {
-        error: err.message,
+        error: err?.message || String(err),
       });
+    });
+
+    this.redis.on('reconnecting', () => {
+      this.logger.warn('Presence Redis reconnecting...', 'PresenceService');
+    });
+
+    this.redis.on('ready', () => {
+      this.logger.log('Presence Redis ready', 'PresenceService');
     });
 
     await this.redis.connect();
     this.logger.log('Presence Redis connected', 'PresenceService');
 
+    // Start ping interval to keep connection alive
+    this.startPingInterval();
+
     // Clean up stale presence data from previous server runs
     // Socket connections don't survive restarts, but Redis data does
     await this.clearAllPresenceData();
+  }
+
+  /**
+   * Start a periodic ping to keep the Redis connection alive
+   * This prevents idle timeout disconnections
+   */
+  private startPingInterval(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+
+    this.pingInterval = setInterval(() => {
+      if (this.redis?.isOpen) {
+        this.redis.ping().catch((error) => {
+          this.logger.warn('Presence Redis ping failed', 'PresenceService', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      }
+    }, this.PING_INTERVAL_MS);
   }
 
   /**
@@ -101,6 +143,12 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    // Clear ping interval
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+
     if (this.redis?.isOpen) {
       await this.redis.quit();
       this.logger.log('Presence Redis disconnected', 'PresenceService');
