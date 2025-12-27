@@ -10,7 +10,6 @@ import { CreateChatDto } from './dto/create-chat.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
-import { AddMemberDto } from './dto/add-member.dto';
 import { ChatType } from '@/generated/prisma/client';
 import {
   CursorPageOptionsDto,
@@ -445,86 +444,6 @@ export class ChatService {
         },
       },
       memberIds: chat.members.map((m) => m.userId),
-    };
-  }
-
-  /**
-   * Add a member to a group chat
-   * @param chatId - Chat ID
-   * @param requesterId - Keycloak user ID of the user making the request
-   * @param dto - User ID to add
-   * @returns Updated chat with all members
-   */
-  async addMemberToChat(
-    chatId: string,
-    requesterId: string,
-    dto: AddMemberDto,
-  ): Promise<ChatResponseDto> {
-    // Verify chat exists and get details
-    const chat = await this.prisma.chat.findUnique({
-      where: { id: chatId },
-      include: {
-        members: true,
-      },
-    });
-
-    if (!chat) {
-      throw new NotFoundException(`Chat with ID ${chatId} not found`);
-    }
-
-    // Verify chat is a GROUP chat (not DIRECT)
-    if (chat.type !== ChatType.GROUP) {
-      throw new BadRequestException('Can only add members to group chats');
-    }
-
-    // Verify requester is a member of the chat
-    const isRequesterMember = chat.members.some(
-      (member) => member.userId === requesterId,
-    );
-
-    if (!isRequesterMember) {
-      throw new ForbiddenException('You are not a member of this chat');
-    }
-
-    // Verify user to add is not already a member
-    const isAlreadyMember = chat.members.some(
-      (member) => member.userId === dto.userId,
-    );
-
-    if (isAlreadyMember) {
-      throw new BadRequestException('User is already a member of this chat');
-    }
-
-    // Add the new member
-    await this.prisma.chatMember.create({
-      data: {
-        chatId,
-        userId: dto.userId,
-      },
-    });
-
-    // Fetch updated chat with all members
-    const updatedChat = await this.prisma.chat.findUnique({
-      where: { id: chatId },
-      include: {
-        members: {
-          orderBy: { joinedAt: 'asc' },
-        },
-      },
-    });
-
-    return {
-      id: updatedChat!.id,
-      name: updatedChat!.name,
-      type: updatedChat!.type,
-      creatorId: updatedChat!.creatorId,
-      createdAt: updatedChat!.createdAt,
-      updatedAt: updatedChat!.updatedAt,
-      members: updatedChat!.members.map((member) => ({
-        id: member.id,
-        userId: member.userId,
-        joinedAt: member.joinedAt,
-      })),
     };
   }
 

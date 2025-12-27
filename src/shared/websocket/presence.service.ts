@@ -266,15 +266,6 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Check if a specific user is online
-   */
-  async isUserOnline(userId: string): Promise<boolean> {
-    const userKey = `presence:user:${userId}`;
-    const socketCount = await this.redis.sCard(userKey);
-    return socketCount > 0;
-  }
-
-  /**
    * Check if any admin is online
    */
   async isAnyAdminOnline(): Promise<boolean> {

@@ -114,17 +114,6 @@ export class WebSocketGateway
         }
       }
     }
-
-    // Emit connection success to client
-    client.emit(WEBSOCKET_EVENTS.CONNECTED, {
-      success: true,
-      statusCode: 200,
-      timestamp: new Date().toISOString(),
-      data: {
-        socketId,
-        message: 'Connected successfully',
-      },
-    });
   }
 
   /**
@@ -163,21 +152,7 @@ export class WebSocketGateway
   }
 
   /**
-   * Handle ping events from clients
-   * Also refreshes presence TTL to keep user online
-   */
-  @SubscribeMessage(WEBSOCKET_EVENTS.PING)
-  async handlePing(@ConnectedSocket() client: Socket): Promise<void> {
-    // Refresh presence TTL
-    await this.presenceService.refreshPresence(client.id);
-
-    this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.PONG, {
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Handle authentication events (placeholder for future Keycloak integration)
+   * Handle authentication events (re-authenticate with new token)
    */
   @SubscribeMessage(WEBSOCKET_EVENTS.AUTHENTICATE)
   async handleAuthenticate(
@@ -212,14 +187,6 @@ export class WebSocketGateway
       }
 
       client.data.user = user;
-      this.websocketService.emitToClient(
-        client,
-        WEBSOCKET_EVENTS.AUTHENTICATED,
-        {
-          message: 'Authentication successful',
-          userId: user.sub,
-        },
-      );
       return true;
     } catch (err) {
       this.logger.warn('WebSocket authentication failed', 'WebSocketGateway', {
@@ -285,10 +252,6 @@ export class WebSocketGateway
     }
 
     await this.websocketService.joinRoom(client, room);
-    this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.JOINED_ROOM, {
-      room,
-      message: `Successfully joined room: ${room}`,
-    });
   }
 
   /**
@@ -315,45 +278,6 @@ export class WebSocketGateway
     }
 
     await this.websocketService.leaveRoom(client, room);
-    this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.LEFT_ROOM, {
-      room,
-      message: `Successfully left room: ${room}`,
-    });
-  }
-
-  /**
-   * Handle get online users event
-   * Returns socket IDs in a room or total connected clients
-   */
-  @SubscribeMessage(WEBSOCKET_EVENTS.GET_ONLINE_USERS)
-  async handleGetOnlineUsers(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { room?: string },
-  ): Promise<void> {
-    const { room } = payload;
-
-    if (room) {
-      const socketIds = await this.websocketService.getRoomSockets(room);
-      this.websocketService.emitToClient(
-        client,
-        WEBSOCKET_EVENTS.ONLINE_USERS,
-        {
-          room,
-          socketIds,
-          count: socketIds.length,
-        },
-      );
-    } else {
-      // Return all connected clients
-      const sockets = await this.server.fetchSockets();
-      this.websocketService.emitToClient(
-        client,
-        WEBSOCKET_EVENTS.ONLINE_USERS,
-        {
-          count: sockets.length,
-        },
-      );
-    }
   }
 
   /**
