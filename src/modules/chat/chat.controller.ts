@@ -242,8 +242,12 @@ export class ChatController {
   ): Promise<MessageResponseDto> {
     const senderId = user.sub;
 
-    // Send message via service (saves to DB)
-    const message = await this.chatService.sendMessage(chatId, senderId, dto);
+    // Send message via service (saves to DB, returns message + memberIds)
+    const { message, memberIds } = await this.chatService.sendMessage(
+      chatId,
+      senderId,
+      dto,
+    );
 
     // Emit to chat room for real-time message display (users with chat window open)
     this.websocketService.emitToRoom(
@@ -258,22 +262,19 @@ export class ChatController {
 
     // Emit to each member's personal room for unread badge updates
     // Uses separate event to avoid double-counting when user is in both rooms
-    const chat = await this.chatService.getChatById(chatId, senderId);
-    if (chat.members) {
-      chat.members
-        .filter((member) => member.userId !== senderId) // Don't notify sender
-        .forEach((member) => {
-          this.websocketService.emitToRoom(
-            `user:${member.userId}`,
-            WEBSOCKET_EVENTS.UNREAD_INCREMENT,
-            message,
-            {
-              senderId,
-              chatId,
-            },
-          );
-        });
-    }
+    memberIds
+      .filter((memberId) => memberId !== senderId) // Don't notify sender
+      .forEach((memberId) => {
+        this.websocketService.emitToRoom(
+          `user:${memberId}`,
+          WEBSOCKET_EVENTS.UNREAD_INCREMENT,
+          message,
+          {
+            senderId,
+            chatId,
+          },
+        );
+      });
 
     return message;
   }

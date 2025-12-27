@@ -330,13 +330,13 @@ export class ChatService {
    * @param chatId - Chat ID
    * @param senderId - Keycloak user ID of the sender
    * @param dto - Message content
-   * @returns Created message
+   * @returns Created message and member IDs (for notifications)
    */
   async sendMessage(
     chatId: string,
     senderId: string,
     dto: SendMessageDto,
-  ): Promise<MessageResponseDto> {
+  ): Promise<{ message: MessageResponseDto; memberIds: string[] }> {
     // Verify chat exists and get members
     const chat = await this.prisma.chat.findUnique({
       where: { id: chatId },
@@ -417,31 +417,34 @@ export class ChatService {
     });
 
     return {
-      id: message.id,
-      chatId: message.chatId,
-      senderId: message.senderId,
-      content: message.content,
-      isEdited: message.isEdited,
-      isDeleted: message.isDeleted,
-      createdAt: message.createdAt,
-      updatedAt: message.updatedAt,
-      replyToId: message.replyToId,
-      replyTo: message.replyTo
-        ? {
-            id: message.replyTo.id,
-            content: message.replyTo.content,
-            senderId: message.replyTo.senderId,
-            isDeleted: message.replyTo.isDeleted,
-          }
-        : null,
-      sender: {
-        id: message.sender.id,
-        firstName: message.sender.firstName,
-        lastName: message.sender.lastName,
-        username: message.sender.username,
-        email: message.sender.email,
-        avatarUrl: message.sender.avatarUrl,
+      message: {
+        id: message.id,
+        chatId: message.chatId,
+        senderId: message.senderId,
+        content: message.content,
+        isEdited: message.isEdited,
+        isDeleted: message.isDeleted,
+        createdAt: message.createdAt,
+        updatedAt: message.updatedAt,
+        replyToId: message.replyToId,
+        replyTo: message.replyTo
+          ? {
+              id: message.replyTo.id,
+              content: message.replyTo.content,
+              senderId: message.replyTo.senderId,
+              isDeleted: message.replyTo.isDeleted,
+            }
+          : null,
+        sender: {
+          id: message.sender.id,
+          firstName: message.sender.firstName,
+          lastName: message.sender.lastName,
+          username: message.sender.username,
+          email: message.sender.email,
+          avatarUrl: message.sender.avatarUrl,
+        },
       },
+      memberIds: chat.members.map((m) => m.userId),
     };
   }
 
