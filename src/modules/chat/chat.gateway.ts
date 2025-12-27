@@ -38,8 +38,10 @@ export class ChatGateway {
     @MessageBody() payload: { chatId: string; userId: string },
   ): void {
     const { chatId, userId } = payload;
+    const authenticatedUserId = client.data.user?.sub;
 
-    if (!chatId || !userId) {
+    // Validate userId matches authenticated user to prevent spoofing
+    if (!chatId || !userId || userId !== authenticatedUserId) {
       return;
     }
 
@@ -62,8 +64,10 @@ export class ChatGateway {
     @MessageBody() payload: { chatId: string; userId: string },
   ): void {
     const { chatId, userId } = payload;
+    const authenticatedUserId = client.data.user?.sub;
 
-    if (!chatId || !userId) {
+    // Validate userId matches authenticated user to prevent spoofing
+    if (!chatId || !userId || userId !== authenticatedUserId) {
       return;
     }
 
@@ -87,8 +91,10 @@ export class ChatGateway {
     payload: { chatId: string; messageId: string; userId: string },
   ): Promise<void> {
     const { chatId, messageId, userId } = payload;
+    const authenticatedUserId = client.data.user?.sub;
 
-    if (!chatId || !messageId || !userId) {
+    // Validate userId matches authenticated user to prevent spoofing
+    if (!chatId || !messageId || !userId || userId !== authenticatedUserId) {
       return;
     }
 
@@ -128,8 +134,16 @@ export class ChatGateway {
     payload: { chatId: string; messageIds: string[]; userId: string },
   ): Promise<void> {
     const { chatId, messageIds, userId } = payload;
+    const authenticatedUserId = client.data.user?.sub;
 
-    if (!chatId || !messageIds || !Array.isArray(messageIds) || !userId) {
+    // Validate userId matches authenticated user to prevent spoofing
+    if (
+      !chatId ||
+      !messageIds ||
+      !Array.isArray(messageIds) ||
+      !userId ||
+      userId !== authenticatedUserId
+    ) {
       this.logger.warn(
         'Invalid messages read event payload',
         'ChatGateway',

@@ -16,6 +16,7 @@ import { UseFilters } from '@nestjs/common';
 import { ExceptionsFilter } from '@/filters/exceptions.filter';
 import { WEBSOCKET_EVENTS } from '@/constants/websocket.constant';
 import { KeycloakAuthService } from '@/shared/keycloak/keycloak-auth.service';
+import { PrismaService } from '@/database/database.service';
 
 /**
  * Main WebSocket gateway handling connections and system events
@@ -39,6 +40,7 @@ export class WebSocketGateway
     private readonly websocketService: WebSocketService,
     private readonly presenceService: PresenceService,
     private readonly keycloakAuthService: KeycloakAuthService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -246,6 +248,7 @@ export class WebSocketGateway
     @MessageBody() payload: { room: string },
   ): Promise<void> {
     const { room } = payload;
+    const userId = client.data.user?.sub;
 
     if (!room) {
       this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.ERROR, {
@@ -258,6 +261,27 @@ export class WebSocketGateway
         },
       });
       return;
+    }
+
+    // Validate chat room membership to prevent unauthorized access
+    if (room.startsWith('chat:')) {
+      const chatId = room.replace('chat:', '');
+      const isMember = await this.prisma.chatMember.findFirst({
+        where: { chatId, userId },
+      });
+
+      if (!isMember) {
+        this.websocketService.emitToClient(client, WEBSOCKET_EVENTS.ERROR, {
+          success: false,
+          statusCode: 403,
+          timestamp: new Date().toISOString(),
+          error: {
+            code: 'WS_UNAUTHORIZED',
+            message: 'Not a member of this chat',
+          },
+        });
+        return;
+      }
     }
 
     await this.websocketService.joinRoom(client, room);
