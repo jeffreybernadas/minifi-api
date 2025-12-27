@@ -50,6 +50,19 @@ enum SubscriptionStatus {
   TRIALING
 }
 
+enum AdvisoryType {
+  INFO
+  WARNING
+  MAINTENANCE
+  CRITICAL
+}
+
+enum AdvisoryStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
   id String @id // Keycloak sub (UUID) - NOT auto-generated
 
@@ -75,6 +88,9 @@ model User {
   // Chat relations
   chatMemberships ChatMember[]
   messages        Message[]
+
+  // Advisory dismissals
+  advisoryDismissals UserAdvisoryDismissal[]
 
   // Admin moderation
   isBlocked     Boolean   @default(false)
@@ -325,4 +341,42 @@ model Subscription {
 
   @@index([tier, status])
   @@index([stripeCustomerId])
+}
+
+model Advisory {
+  id      String         @id @default(uuid())
+  title   String         @db.VarChar(200)
+  content String         @db.Text // HTML from rich text editor
+  type    AdvisoryType   @default(INFO)
+  status  AdvisoryStatus @default(DRAFT)
+
+  // Display control
+  publishedAt DateTime?
+  expiresAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dismissals UserAdvisoryDismissal[]
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([expiresAt])
+  @@index([status, publishedAt, expiresAt])
+}
+
+model UserAdvisoryDismissal {
+  id          String   @id @default(uuid())
+  userId      String
+  advisoryId  String
+  dismissedAt DateTime @default(now())
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisory Advisory @relation(fields: [advisoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, advisoryId])
+  @@index([userId])
+  @@index([advisoryId])
 }
