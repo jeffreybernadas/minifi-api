@@ -217,8 +217,8 @@ FreeMonthlyReportEmailTemplate.PreviewProps = {
   uniqueVisitors: 856,
   totalActiveLinks: 12,
   linksCreatedThisMonth: 3,
-  upgradeUrl: 'https://minifi-url.vercel.app/pricing',
-  dashboardUrl: 'https://minifi-url.vercel.app/dashboard',
+  upgradeUrl: 'http://localhost:3000/dashboard/settings',
+  dashboardUrl: 'http://localhost:3000/dashboard',
 } as FreeMonthlyReportEmailProps;
 
 export default FreeMonthlyReportEmailTemplate;

@@ -100,7 +100,7 @@ export class LinkExpiringNotificationCron {
         }
       }
 
-      const dashboardUrl = this.configService.getOrThrow('app.url', {
+      const dashboardUrl = this.configService.getOrThrow('app.frontendUrl', {
         infer: true,
       });
 
@@ -130,9 +130,10 @@ export class LinkExpiringNotificationCron {
         );
 
         const html = await EmailRenderer.renderLinkExpiring({
+          baseUrl: dashboardUrl,
           expiringLinks: expiringLinkData,
           totalCount: expiringLinkData.length,
-          dashboardUrl: `${dashboardUrl}/dashboard/links`,
+          dashboardUrl: `${dashboardUrl}/dashboard`,
         });
 
         await this.emailProducer.publishSendEmail({

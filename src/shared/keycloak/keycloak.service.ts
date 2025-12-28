@@ -12,9 +12,9 @@ export class KeycloakConfigService implements KeycloakConnectOptionsFactory {
   constructor(private readonly configService: ConfigService) {}
   createKeycloakConnectOptions(): KeycloakConnectOptions {
     return {
-      authServerUrl: this.configService.get('keycloak.url'),
-      realm: this.configService.get('keycloak.realm'),
-      clientId: this.configService.get('keycloak.clientId'),
+      authServerUrl: this.configService.getOrThrow('keycloak.url'),
+      realm: this.configService.getOrThrow('keycloak.realm'),
+      clientId: this.configService.getOrThrow('keycloak.clientId'),
       secret: '',
       policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
       tokenValidation: TokenValidation.OFFLINE,

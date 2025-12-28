@@ -25,8 +25,14 @@ const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 export const LinkDeletionWarningEmailTemplate = (
   props: LinkDeletionWarningEmailProps,
 ) => {
-  const { firstName, deletingLinks, totalCount, upgradeUrl, dashboardUrl } =
-    props;
+  const {
+    firstName,
+    deletingLinks,
+    totalCount,
+    upgradeUrl,
+    dashboardUrl,
+    baseUrl,
+  } = props;
 
   const previewText = `${totalCount?.toString() || '1'} link${totalCount && totalCount > 1 ? 's' : ''} will be deleted soon`;
 
@@ -149,22 +155,19 @@ export const LinkDeletionWarningEmailTemplate = (
                 © {new Date().getFullYear()} Minifi. All rights reserved.
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
-                <Link
-                  href="https://minifi-url.vercel.app"
-                  className="text-[#666666] underline"
-                >
-                  minifi-url.vercel.app
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/privacy"
+                  href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/terms"
+                  href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -198,8 +201,9 @@ LinkDeletionWarningEmailTemplate.PreviewProps = {
     },
   ],
   totalCount: 2,
-  upgradeUrl: 'https://minifi-url.vercel.app/pricing',
-  dashboardUrl: 'https://minifi-url.vercel.app/dashboard/links',
+  upgradeUrl: 'http://localhost:3000/dashboard/settings',
+  dashboardUrl: 'http://localhost:3000/dashboard',
+  baseUrl: 'http://localhost:3000',
 } as LinkDeletionWarningEmailProps;
 
 export default LinkDeletionWarningEmailTemplate;

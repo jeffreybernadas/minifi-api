@@ -18,7 +18,7 @@ import * as React from 'react';
 const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 export const ChatUnreadDigestTemplate = (props: ChatUnreadDigestProps) => {
-  const { unreadChats, totalUnreadCount } = props;
+  const { unreadChats, totalUnreadCount, baseUrl } = props;
 
   const previewText = `You have ${totalUnreadCount || 0} unread message${totalUnreadCount && totalUnreadCount > 1 ? 's' : ''}`;
 
@@ -105,22 +105,19 @@ export const ChatUnreadDigestTemplate = (props: ChatUnreadDigestProps) => {
                 © {new Date().getFullYear()} Minifi. All rights reserved.
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
-                <Link
-                  href="https://minifi-url.vercel.app"
-                  className="text-[#666666] underline"
-                >
-                  minifi-url.vercel.app
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/privacy"
+                  href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/terms"
+                  href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -146,6 +143,7 @@ ChatUnreadDigestTemplate.PreviewProps = {
     },
   ],
   totalUnreadCount: 5,
+  baseUrl: 'http://localhost:3000',
 } as ChatUnreadDigestProps;
 
 export default ChatUnreadDigestTemplate;

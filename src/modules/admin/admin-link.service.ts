@@ -219,9 +219,12 @@ export class AdminLinkService {
       },
     });
 
-    const enableUrlScan = this.configService.get<boolean>('app.enableUrlScan', {
-      infer: true,
-    });
+    const enableUrlScan = this.configService.getOrThrow<boolean>(
+      'app.enableUrlScan',
+      {
+        infer: true,
+      },
+    );
     if (enableUrlScan) {
       try {
         await this.scanProducer.queueScan({

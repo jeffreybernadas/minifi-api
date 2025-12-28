@@ -23,7 +23,7 @@ const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
  * Sent when a new user first logs in (sync-on-demand user creation)
  */
 export const WelcomeEmailTemplate = (props: WelcomeEmailProps) => {
-  const { firstName, dashboardUrl } = props;
+  const { firstName, dashboardUrl, baseUrl } = props;
 
   const previewText = 'Welcome to Minifi - Start shortening your links!';
 
@@ -114,22 +114,19 @@ export const WelcomeEmailTemplate = (props: WelcomeEmailProps) => {
                 © {new Date().getFullYear()} Minifi. All rights reserved.
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
-                <Link
-                  href="https://minifi-url.vercel.app"
-                  className="text-[#666666] underline"
-                >
-                  minifi-url.vercel.app
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/privacy"
+                  href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/terms"
+                  href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -145,7 +142,8 @@ export const WelcomeEmailTemplate = (props: WelcomeEmailProps) => {
 
 WelcomeEmailTemplate.PreviewProps = {
   firstName: 'Alex',
-  dashboardUrl: 'https://minifi-url.vercel.app/dashboard',
+  dashboardUrl: 'http://localhost:3000/dashboard',
+  baseUrl: 'http://localhost:3000',
 } as WelcomeEmailProps;
 
 export default WelcomeEmailTemplate;

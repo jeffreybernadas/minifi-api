@@ -460,7 +460,7 @@ export class StripeService {
         return;
       }
 
-      const dashboardUrl = this.configService.getOrThrow('app.url', {
+      const dashboardUrl = this.configService.getOrThrow('app.frontendUrl', {
         infer: true,
       });
       const defaultSender = this.configService.getOrThrow('resend.sender', {
@@ -470,6 +470,7 @@ export class StripeService {
       const tier = action === 'cancelled' ? 'FREE' : 'PRO';
 
       const html = await EmailRenderer.renderSubscription({
+        baseUrl: dashboardUrl,
         firstName: user.firstName ?? undefined,
         action,
         tier,

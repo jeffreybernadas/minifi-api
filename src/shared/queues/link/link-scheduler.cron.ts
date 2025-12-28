@@ -198,7 +198,9 @@ export class LinkSchedulerCron {
         }
       }
 
-      const appUrl = this.configService.getOrThrow('app.url', { infer: true });
+      const appUrl = this.configService.getOrThrow('app.frontendUrl', {
+        infer: true,
+      });
       const defaultSender = this.configService.getOrThrow('resend.sender', {
         infer: true,
       });
@@ -227,11 +229,12 @@ export class LinkSchedulerCron {
         );
 
         const html = await EmailRenderer.renderLinkDeletionWarning({
+          baseUrl: appUrl,
           firstName: userData.firstName,
           deletingLinks: deletingLinkData,
           totalCount: deletingLinkData.length,
-          upgradeUrl: `${appUrl}/pricing`,
-          dashboardUrl: `${appUrl}/dashboard/links`,
+          upgradeUrl: `${appUrl}/dashboard/settings`,
+          dashboardUrl: `${appUrl}/dashboard`,
         });
 
         await this.emailProducer.publishSendEmail({

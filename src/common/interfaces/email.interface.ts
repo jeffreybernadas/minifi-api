@@ -1,4 +1,11 @@
-export interface TestEmailTemplateProps {
+/**
+ * Base props shared by all email templates
+ */
+export interface BaseEmailProps {
+  baseUrl: string;
+}
+
+export interface TestEmailTemplateProps extends BaseEmailProps {
   name?: string;
   buttonText?: string;
   buttonUrl?: string;
@@ -12,12 +19,12 @@ export interface UnreadChatData {
   lastMessageSenderId: string;
 }
 
-export interface ChatUnreadDigestProps {
+export interface ChatUnreadDigestProps extends BaseEmailProps {
   unreadChats: UnreadChatData[];
   totalUnreadCount: number;
 }
 
-export interface SecurityAlertEmailProps {
+export interface SecurityAlertEmailProps extends BaseEmailProps {
   originalUrl: string;
   shortCode?: string | null; // Nullable when customAlias is used
   status: string;
@@ -36,13 +43,13 @@ export interface ExpiringLinkData {
   daysRemaining: number;
 }
 
-export interface LinkExpiringEmailProps {
+export interface LinkExpiringEmailProps extends BaseEmailProps {
   expiringLinks: ExpiringLinkData[];
   totalCount: number;
   dashboardUrl: string;
 }
 
-export interface WelcomeEmailProps {
+export interface WelcomeEmailProps extends BaseEmailProps {
   firstName?: string;
   dashboardUrl: string;
 }
@@ -93,7 +100,7 @@ export interface ClicksByDateData {
   count: number;
 }
 
-export interface MonthlyReportEmailProps {
+export interface MonthlyReportEmailProps extends BaseEmailProps {
   firstName?: string;
   month: string;
   year: number;
@@ -134,7 +141,7 @@ export interface UserMonthlyAnalytics {
   clicksByDate: ClicksByDateData[];
 }
 
-export interface SubscriptionEmailProps {
+export interface SubscriptionEmailProps extends BaseEmailProps {
   firstName?: string;
   action: 'upgraded' | 'cancelled' | 'renewing';
   tier: 'FREE' | 'PRO';
@@ -157,7 +164,7 @@ export interface DeletingLinkData {
 /**
  * FREE user link deletion warning email props
  */
-export interface LinkDeletionWarningEmailProps {
+export interface LinkDeletionWarningEmailProps extends BaseEmailProps {
   firstName?: string;
   deletingLinks: DeletingLinkData[];
   totalCount: number;
@@ -168,7 +175,7 @@ export interface LinkDeletionWarningEmailProps {
 /**
  * FREE user simplified monthly report email props
  */
-export interface FreeMonthlyReportEmailProps {
+export interface FreeMonthlyReportEmailProps extends BaseEmailProps {
   firstName?: string;
   month: string;
   year: number;

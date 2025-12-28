@@ -30,7 +30,7 @@ export class EmailQueueService {
    * @param emailJob - Email job data from queue
    */
   async sendEmail(emailJob: SendEmailJobDto): Promise<void> {
-    const defaultSender = this.configService.get('resend.sender', {
+    const defaultSender = this.configService.getOrThrow('resend.sender', {
       infer: true,
     });
 

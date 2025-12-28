@@ -55,7 +55,9 @@ export class MonthlyReportCron {
       });
       const year = lastMonthStart.getFullYear();
 
-      const appUrl = this.configService.getOrThrow('app.url', { infer: true });
+      const appUrl = this.configService.getOrThrow('app.frontendUrl', {
+        infer: true,
+      });
       const defaultSender = this.configService.getOrThrow('resend.sender', {
         infer: true,
       });
@@ -96,6 +98,7 @@ export class MonthlyReportCron {
           }
 
           const html = await EmailRenderer.renderMonthlyReport({
+            baseUrl: appUrl,
             firstName: user.firstName ?? undefined,
             month: monthName,
             year,
@@ -109,7 +112,7 @@ export class MonthlyReportCron {
             topDevices: analytics.topDevices,
             topReferrers: analytics.topReferrers,
             bestDay: analytics.bestDay,
-            dashboardUrl: `${appUrl}/dashboard/analytics`,
+            dashboardUrl: `${appUrl}/dashboard/analytics/overview`,
           });
 
           await this.emailProducer.publishSendEmail({
@@ -160,6 +163,7 @@ export class MonthlyReportCron {
           }
 
           const html = await EmailRenderer.renderFreeMonthlyReport({
+            baseUrl: appUrl,
             firstName: user.firstName ?? undefined,
             month: monthName,
             year,
@@ -167,7 +171,7 @@ export class MonthlyReportCron {
             uniqueVisitors: analytics.uniqueVisitors,
             totalActiveLinks: analytics.totalActiveLinks,
             linksCreatedThisMonth: analytics.linksCreatedThisMonth,
-            upgradeUrl: `${appUrl}/pricing`,
+            upgradeUrl: `${appUrl}/dashboard/settings`,
             dashboardUrl: `${appUrl}/dashboard`,
           });
 

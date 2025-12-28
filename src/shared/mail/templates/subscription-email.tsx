@@ -23,7 +23,7 @@ const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
  * Sent when a user upgrades, cancels, or has a subscription renewing
  */
 export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
-  const { firstName, action, periodEnd, dashboardUrl } = props;
+  const { firstName, action, periodEnd, dashboardUrl, baseUrl } = props;
 
   const formatDate = (date: Date | string): string => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -159,7 +159,7 @@ export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
                 <>
                   Changed your mind?{' '}
                   <Link
-                    href={`${dashboardUrl}/settings/subscription`}
+                    href={`${dashboardUrl}/settings`}
                     className="text-blue-600 no-underline"
                   >
                     Resubscribe anytime
@@ -187,22 +187,19 @@ export const SubscriptionEmailTemplate = (props: SubscriptionEmailProps) => {
                 © {new Date().getFullYear()} Minifi. All rights reserved.
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
-                <Link
-                  href="https://minifi-url.vercel.app"
-                  className="text-[#666666] underline"
-                >
-                  minifi-url.vercel.app
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/privacy"
+                  href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/terms"
+                  href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -221,7 +218,8 @@ SubscriptionEmailTemplate.PreviewProps = {
   action: 'upgraded',
   tier: 'PRO',
   periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  dashboardUrl: 'https://minifi-url.vercel.app/dashboard',
+  dashboardUrl: 'http://localhost:3000/dashboard',
+  baseUrl: 'http://localhost:3000',
 } as SubscriptionEmailProps;
 
 export default SubscriptionEmailTemplate;

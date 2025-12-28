@@ -98,11 +98,16 @@ export class ScanConsumer {
 
       // Send security alert email for non-safe statuses
       if (link.userId && result.status !== 'SAFE' && link.user?.email) {
-        const defaultSender = this.configService.get('resend.sender', {
+        const defaultSender = this.configService.getOrThrow('resend.sender', {
+          infer: true,
+        });
+
+        const baseUrl = this.configService.getOrThrow('app.frontendUrl', {
           infer: true,
         });
 
         const html = await EmailRenderer.renderSecurityAlert({
+          baseUrl: baseUrl ?? '',
           originalUrl: link.originalUrl,
           shortCode: link.shortCode,
           status: result.status,

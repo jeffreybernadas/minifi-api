@@ -17,7 +17,8 @@ export class LoggerService implements NestLogger {
       return ElasticsearchTransformer(logData);
     };
 
-    const isDev = this.configService.get('app.nodeEnv') === 'development';
+    const isDev =
+      this.configService.getOrThrow('app.nodeEnv') === 'development';
 
     const { combine, timestamp, json, colorize, printf } = format;
 
@@ -42,7 +43,7 @@ export class LoggerService implements NestLogger {
         level: 'info',
         transformer: esTransformer,
         clientOpts: {
-          node: this.configService.get('elasticsearch.url') as string,
+          node: this.configService.getOrThrow('elasticsearch.url'),
           log: 'info',
           maxRetries: 2,
           requestTimeout: 10000,

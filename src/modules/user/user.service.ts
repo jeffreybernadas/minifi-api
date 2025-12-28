@@ -119,7 +119,7 @@ export class UserService {
    */
   private async sendWelcomeEmail(user: User): Promise<void> {
     try {
-      const dashboardUrl = this.configService.getOrThrow('app.url', {
+      const dashboardUrl = this.configService.getOrThrow('app.frontendUrl', {
         infer: true,
       });
       const defaultSender = this.configService.getOrThrow('resend.sender', {
@@ -127,6 +127,7 @@ export class UserService {
       });
 
       const html = await EmailRenderer.renderWelcome({
+        baseUrl: dashboardUrl,
         firstName: user.firstName ?? undefined,
         dashboardUrl: `${dashboardUrl}/dashboard`,
       });

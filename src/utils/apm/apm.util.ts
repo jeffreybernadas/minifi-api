@@ -12,7 +12,7 @@ export class ApmInit implements OnModuleInit {
 
   initializeApm(): apm.Agent | null {
     // Only start APM if explicitly enabled via environment variable
-    if (this.configService.get('elasticsearch.apmEnable') === '0') {
+    if (this.configService.getOrThrow('elasticsearch.apmEnable') === '0') {
       this.logger.log(
         'APM is disabled. Set ELASTIC_APM_ENABLE=1 to enable it.',
         'APM',
@@ -22,11 +22,11 @@ export class ApmInit implements OnModuleInit {
 
     try {
       const agent = apm.start({
-        serviceName: this.configService.get('app.name'),
-        serverUrl: this.configService.get('elasticsearch.apmUrl'),
-        secretToken: this.configService.get('elasticsearch.apmSecret'),
+        serviceName: this.configService.getOrThrow('app.name'),
+        serverUrl: this.configService.getOrThrow('elasticsearch.apmUrl'),
+        secretToken: this.configService.getOrThrow('elasticsearch.apmSecret'),
         environment:
-          this.configService.get('app.NODE_ENV') === 'development'
+          this.configService.getOrThrow('app.NODE_ENV') === 'development'
             ? 'development'
             : 'production',
         active: true,
@@ -38,7 +38,7 @@ export class ApmInit implements OnModuleInit {
       });
 
       this.logger.log(
-        `APM agent started for service: ${this.configService.get('app.name')}`,
+        `APM agent started for service: ${this.configService.getOrThrow('app.name')}`,
         'APM',
       );
       return agent;

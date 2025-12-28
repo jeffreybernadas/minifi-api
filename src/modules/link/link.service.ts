@@ -1892,9 +1892,12 @@ export class LinkService {
     requestedBy?: string,
     force = false,
   ): Promise<void> {
-    const enableUrlScan = this.configService.get<boolean>('app.enableUrlScan', {
-      infer: true,
-    });
+    const enableUrlScan = this.configService.getOrThrow<boolean>(
+      'app.enableUrlScan',
+      {
+        infer: true,
+      },
+    );
 
     if (!enableUrlScan) {
       return;

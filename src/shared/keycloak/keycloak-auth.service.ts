@@ -25,7 +25,7 @@ export class KeycloakAuthService {
     private readonly configService: ConfigService,
   ) {
     this.clientId =
-      this.configService.get<KeycloakConfig>('keycloak')?.clientId ?? '';
+      this.configService.getOrThrow<KeycloakConfig>('keycloak')?.clientId ?? '';
   }
 
   /**

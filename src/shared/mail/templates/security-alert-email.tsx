@@ -31,6 +31,7 @@ export const SecurityAlertEmailTemplate = (props: SecurityAlertEmailProps) => {
     reasoning,
     recommendations,
     scannedAt,
+    baseUrl,
   } = props;
 
   const previewText = `Security warning for your link ${shortCode || 'unknown'}`;
@@ -174,22 +175,19 @@ export const SecurityAlertEmailTemplate = (props: SecurityAlertEmailProps) => {
                 © {new Date().getFullYear()} Minifi. All rights reserved.
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
-                <Link
-                  href="https://minifi-url.vercel.app"
-                  className="text-[#666666] underline"
-                >
-                  minifi-url.vercel.app
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/privacy"
+                  href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/terms"
+                  href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -214,6 +212,7 @@ SecurityAlertEmailTemplate.PreviewProps = {
   recommendations:
     'Do not visit this link. Report if you received this from an unknown source. Consider blocking this domain.',
   scannedAt: new Date(),
+  baseUrl: 'http://localhost:3000',
 } as SecurityAlertEmailProps;
 
 export default SecurityAlertEmailTemplate;

@@ -38,6 +38,7 @@ export const MonthlyReportEmailTemplate = (props: MonthlyReportEmailProps) => {
     topReferrers,
     bestDay,
     dashboardUrl,
+    baseUrl,
   } = props;
 
   const previewText = `Your Minifi Report for ${month || 'Month'} ${year?.toString() || new Date().getFullYear().toString()}`;
@@ -286,22 +287,19 @@ export const MonthlyReportEmailTemplate = (props: MonthlyReportEmailProps) => {
                 © {new Date().getFullYear()} Minifi. All rights reserved.
               </Text>
               <Text className="text-[#999999] text-[11px] leading-[16px]">
-                <Link
-                  href="https://minifi-url.vercel.app"
-                  className="text-[#666666] underline"
-                >
-                  minifi-url.vercel.app
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/privacy"
+                  href={`${baseUrl}/privacy`}
                   className="text-[#666666] underline"
                 >
                   Privacy
                 </Link>{' '}
                 &bull;{' '}
                 <Link
-                  href="https://minifi-url.vercel.app/terms"
+                  href={`${baseUrl}/terms`}
                   className="text-[#666666] underline"
                 >
                   Terms
@@ -357,7 +355,8 @@ MonthlyReportEmailTemplate.PreviewProps = {
     { referrer: 'Email', clicks: 567 },
   ],
   bestDay: { date: 'November 15', clicks: 456 },
-  dashboardUrl: 'https://minifi-url.vercel.app/dashboard/analytics',
+  dashboardUrl: 'http://localhost:3000/dashboard/analytics/overview',
+  baseUrl: 'http://localhost:3000',
 } as MonthlyReportEmailProps;
 
 export default MonthlyReportEmailTemplate;

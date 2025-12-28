@@ -114,7 +114,7 @@ export const TestEmailTemplate = (props?: TestEmailTemplateProps) => {
 TestEmailTemplate.PreviewProps = {
   name: 'Test User',
   buttonText: 'Visit Dashboard',
-  buttonUrl: 'https://minifi-url.vercel.app/dashboard',
+  buttonUrl: 'http://localhost:3000/dashboard',
 } as TestEmailTemplateProps;
 
 export default TestEmailTemplate;

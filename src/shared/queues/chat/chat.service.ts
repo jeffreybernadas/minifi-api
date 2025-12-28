@@ -192,13 +192,18 @@ export class ChatQueueService {
         0,
       );
 
+      const baseUrl = this.configService.getOrThrow('app.frontendUrl', {
+        infer: true,
+      });
+
       // Render email template
       const html = await EmailRenderer.renderChatUnreadDigest({
+        baseUrl: baseUrl ?? '',
         unreadChats,
         totalUnreadCount,
       });
 
-      const defaultSender = this.configService.get('resend.sender', {
+      const defaultSender = this.configService.getOrThrow('resend.sender', {
         infer: true,
       });
 

@@ -24,7 +24,7 @@ async function bootstrap() {
   app.useLogger(app.get(LoggerService));
 
   // Enable CORS for both HTTP and WebSocket
-  const corsOrigin = configService.get('websocket.cors.origin', {
+  const corsOrigin = configService.getOrThrow('websocket.cors.origin', {
     infer: true,
   });
   app.enableCors({

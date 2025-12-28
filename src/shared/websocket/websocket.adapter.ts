@@ -26,12 +26,16 @@ export class WebSocketRedisAdapter extends IoAdapter {
    * Connect to Redis and create adapter
    */
   async connectToRedis(): Promise<void> {
-    const redisHost = this.configService.get('redis.host', { infer: true });
-    const redisPort = this.configService.get('redis.port', { infer: true });
-    const redisPassword = this.configService.get('redis.password', {
+    const redisHost = this.configService.getOrThrow('redis.host', {
       infer: true,
     });
-    const redisUsername = this.configService.get('redis.username', {
+    const redisPort = this.configService.getOrThrow('redis.port', {
+      infer: true,
+    });
+    const redisPassword = this.configService.getOrThrow('redis.password', {
+      infer: true,
+    });
+    const redisUsername = this.configService.getOrThrow('redis.username', {
       infer: true,
     });
 
