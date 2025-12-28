@@ -30,7 +30,7 @@ export class ChatQueueService {
     this.logger.log('Starting unread digest email job', 'ChatQueueService', {});
 
     try {
-      // Find all chat members with unread messages
+      // Find all chat members with their chats and last message
       const chatMembers = await this.prisma.chatMember.findMany({
         include: {
           chat: {
@@ -45,70 +45,101 @@ export class ChatQueueService {
                 orderBy: {
                   createdAt: 'desc',
                 },
-                take: 1, // Get only the last unread message per chat
+                take: 1,
               },
             },
           },
         },
       });
 
-      // Group by userId and filter out users with no unread messages
-      const userUnreadMap = new Map<
-        string,
-        { userId: string; unreadChats: UnreadChatDataDto[] }
-      >();
+      // First pass: identify all (chatId, userId) pairs with potential unread messages
+      const potentialUnreadPairs: Array<{
+        chatId: string;
+        userId: string;
+        chatName: string;
+        lastMessage: (typeof chatMembers)[0]['chat']['messages'][0];
+      }> = [];
 
       for (const member of chatMembers) {
-        // Filter messages that are not read by this specific user and not sent by them
         const unreadMessages = member.chat.messages.filter(
           (msg) =>
             !msg.readBy.some((read) => read.userId === member.userId) &&
             msg.senderId !== member.userId,
         );
 
-        if (unreadMessages.length === 0) {
-          continue;
-        }
-
-        // Count total unread messages for this user in this chat
-        const unreadCount = await this.prisma.message.count({
-          where: {
+        if (unreadMessages.length > 0 && unreadMessages[0]) {
+          potentialUnreadPairs.push({
             chatId: member.chatId,
-            isDeleted: false,
-            senderId: {
-              not: member.userId,
-            },
-            readBy: {
-              none: {
-                userId: member.userId,
-              },
-            },
-          },
-        });
+            userId: member.userId,
+            chatName: member.chat.name ?? 'Direct Chat',
+            lastMessage: unreadMessages[0],
+          });
+        }
+      }
+
+      if (potentialUnreadPairs.length === 0) {
+        this.logger.log(
+          'No users with unread messages found',
+          'ChatQueueService',
+        );
+        return;
+      }
+
+      // Batch query: get all unread counts in a single raw query
+      // This avoids N+1 queries for admins with many chats
+      const unreadCountsRaw = await this.prisma.$queryRaw<
+        Array<{ chat_id: string; user_id: string; unread_count: bigint }>
+      >`
+        SELECT
+          m."chatId" as chat_id,
+          cm."userId" as user_id,
+          COUNT(m.id) as unread_count
+        FROM "Message" m
+        INNER JOIN "ChatMember" cm ON cm."chatId" = m."chatId"
+        WHERE m."isDeleted" = false
+          AND m."senderId" != cm."userId"
+          AND NOT EXISTS (
+            SELECT 1 FROM "MessageRead" mr
+            WHERE mr."messageId" = m.id AND mr."userId" = cm."userId"
+          )
+        GROUP BY m."chatId", cm."userId"
+        HAVING COUNT(m.id) > 0
+      `;
+
+      // Build a lookup map for quick access
+      const unreadCountMap = new Map<string, number>();
+      for (const row of unreadCountsRaw) {
+        const key = `${row.chat_id}:${row.user_id}`;
+        unreadCountMap.set(key, Number(row.unread_count));
+      }
+
+      // Build userUnreadMap using pre-fetched counts
+      const userUnreadMap = new Map<
+        string,
+        { userId: string; unreadChats: UnreadChatDataDto[] }
+      >();
+
+      for (const pair of potentialUnreadPairs) {
+        const key = `${pair.chatId}:${pair.userId}`;
+        const unreadCount = unreadCountMap.get(key) ?? 0;
 
         if (unreadCount === 0) {
           continue;
         }
 
-        const lastMessage = unreadMessages[0];
-
-        if (!lastMessage) {
-          continue;
-        }
-
-        if (!userUnreadMap.has(member.userId)) {
-          userUnreadMap.set(member.userId, {
-            userId: member.userId,
+        if (!userUnreadMap.has(pair.userId)) {
+          userUnreadMap.set(pair.userId, {
+            userId: pair.userId,
             unreadChats: [],
           });
         }
 
-        userUnreadMap.get(member.userId)!.unreadChats.push({
-          chatId: member.chatId,
-          chatName: member.chat.name ?? 'Direct Chat',
+        userUnreadMap.get(pair.userId)!.unreadChats.push({
+          chatId: pair.chatId,
+          chatName: pair.chatName,
           unreadCount,
-          lastMessageContent: lastMessage.content,
-          lastMessageSenderId: lastMessage.senderId,
+          lastMessageContent: pair.lastMessage.content,
+          lastMessageSenderId: pair.lastMessage.senderId,
         });
       }
 
@@ -151,18 +182,20 @@ export class ChatQueueService {
     unreadChats: UnreadChatDataDto[],
   ): Promise<void> {
     try {
-      // Fetch user from database to get email and check notification preferences
+      // Fetch user from database to get email, subscription tier, and notification preferences
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: {
           email: true,
           emailNotificationsEnabled: true,
           firstName: true,
-          subscription: true,
+          subscription: {
+            select: { tier: true },
+          },
         },
       });
 
-      // Skip if user not found, notifications disabled, or no subscription
+      // Skip if user not found or notifications disabled
       if (!user) {
         this.logger.warn(
           `User not found for unread digest: ${userId}`,
@@ -171,9 +204,11 @@ export class ChatQueueService {
         return;
       }
 
-      if (!user.subscription) {
+      // Skip if user is not PRO (chat is PRO-only feature)
+      // This handles users who downgraded but still have old unread messages
+      if (user.subscription?.tier !== 'PRO') {
         this.logger.log(
-          `Skipping unread digest - no subscription for user: ${userId}`,
+          `Skipping unread digest - user is not PRO: ${userId}`,
           'ChatQueueService',
         );
         return;

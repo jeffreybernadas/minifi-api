@@ -1,3 +1,5 @@
+import { UnreadChatDataDto } from '@/shared/queues/chat/dto/chat-job.dto';
+
 /**
  * Base props shared by all email templates
  */
@@ -11,16 +13,8 @@ export interface TestEmailTemplateProps extends BaseEmailProps {
   buttonUrl?: string;
 }
 
-export interface UnreadChatData {
-  chatId: string;
-  chatName: string;
-  unreadCount: number;
-  lastMessageContent: string;
-  lastMessageSenderId: string;
-}
-
 export interface ChatUnreadDigestProps extends BaseEmailProps {
-  unreadChats: UnreadChatData[];
+  unreadChats: UnreadChatDataDto[];
   totalUnreadCount: number;
 }
 
