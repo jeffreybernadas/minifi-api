@@ -26,7 +26,7 @@ export class ApmInit implements OnModuleInit {
         serverUrl: this.configService.getOrThrow('elasticsearch.apmUrl'),
         secretToken: this.configService.getOrThrow('elasticsearch.apmSecret'),
         environment:
-          this.configService.getOrThrow('app.NODE_ENV') === 'development'
+          this.configService.getOrThrow('app.nodeEnv') === 'development'
             ? 'development'
             : 'production',
         active: true,
