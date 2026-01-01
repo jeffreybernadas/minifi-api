@@ -42,6 +42,7 @@ export class LoggerService implements NestLogger {
       elasticsearch: {
         level: 'info',
         transformer: esTransformer,
+        indexPrefix: `${this.configService.getOrThrow('app.name')}-logs`,
         clientOpts: {
           node: this.configService.getOrThrow('elasticsearch.url'),
           log: 'info',
