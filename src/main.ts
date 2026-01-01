@@ -11,6 +11,7 @@ import { LoggerService } from '@/shared/logger/logger.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TransformResponseInterceptor } from '@/interceptors/transform-response.interceptor';
 import { WebSocketRedisAdapter } from '@/shared/websocket/websocket.adapter';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -33,6 +34,16 @@ async function bootstrap() {
   });
 
   app.use(helmet());
+
+  // Serve static files and landing page from public directory
+  const publicPath = join(process.cwd(), 'public');
+  app.useStaticAssets(publicPath);
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .get('/', (_, res) => {
+      res.sendFile(join(publicPath, 'index.html'));
+    });
 
   // Setup WebSocket adapter with Redis
   const wsAdapter = new WebSocketRedisAdapter(app, configService);

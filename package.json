@@ -1,6 +1,6 @@
 {
   "name": "nest-starter",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "The api for my minifi project, an advanced URL shortener platform",
   "author": {
     "name": "Jeffrey Bernadas",
