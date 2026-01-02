@@ -166,14 +166,25 @@ export class StripeService {
       { cancel_at_period_end: true },
     );
 
+    // Get period end date for email
+    const firstItem = updated.items?.data?.[0];
+    const periodEnd = firstItem?.current_period_end
+      ? new Date(firstItem.current_period_end * 1000)
+      : null;
+
+    // Send cancellation confirmation email immediately
+    this.logger.log(
+      `Sending cancellation email to user: ${userId}`,
+      'StripeService',
+      { periodEnd },
+    );
+    await this.sendSubscriptionEmail(userId, 'cancelled', periodEnd);
+
     // Return cancellation info for immediate UI feedback
     // The webhook will update local DB with cancelAtPeriodEnd=true
-    // Note: current_period_end comes from subscription items in this Stripe SDK version
-    const firstItem = updated.items?.data?.[0];
-    const periodEnd = firstItem?.current_period_end;
     return {
       cancelAtPeriodEnd: updated.cancel_at_period_end,
-      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
+      currentPeriodEnd: periodEnd,
       status: updated.status,
     };
   }
