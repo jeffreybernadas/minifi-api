@@ -23,8 +23,8 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
 
   // TTL for presence keys (5 minutes) - refreshed by Socket.IO ping/pong
   private readonly PRESENCE_TTL_SECONDS = 300;
-  // Ping interval to keep Redis connection alive (30 seconds)
-  private readonly PING_INTERVAL_MS = 30000;
+  // Ping interval to keep Redis connection alive (15 seconds - prevents idle timeout)
+  private readonly PING_INTERVAL_MS = 15000;
 
   constructor(
     private readonly configService: ConfigService<GlobalConfig>,

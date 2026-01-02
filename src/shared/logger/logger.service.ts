@@ -63,8 +63,20 @@ export class LoggerService implements NestLogger {
     });
   }
 
+  /**
+   * Ensure context is a string for Elasticsearch compatibility
+   */
+  private normalizeContext(context?: string | object): string | undefined {
+    if (context === undefined || context === null) return undefined;
+    if (typeof context === 'string') return context;
+    return JSON.stringify(context);
+  }
+
   log(message: string, context?: string | object, meta?: any) {
-    this.logger.info(message, { context, meta });
+    this.logger.info(message, {
+      context: this.normalizeContext(context),
+      meta,
+    });
   }
   error(
     message: string,
@@ -72,9 +84,16 @@ export class LoggerService implements NestLogger {
     context?: string | object,
     meta?: any,
   ) {
-    this.logger.error(message, { trace, context, meta });
+    this.logger.error(message, {
+      trace: this.normalizeContext(trace),
+      context: this.normalizeContext(context),
+      meta,
+    });
   }
   warn(message: string, context?: string | object, meta?: any) {
-    this.logger.warn(message, { context, meta });
+    this.logger.warn(message, {
+      context: this.normalizeContext(context),
+      meta,
+    });
   }
 }
