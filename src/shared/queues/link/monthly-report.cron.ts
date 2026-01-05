@@ -11,8 +11,9 @@ import { LinkService } from '@/modules/link/link.service';
 
 /**
  * Monthly Report Cron Job
- * Runs on the 1st of each month at 10 AM UTC
- * Sends analytics report to PRO users
+ * Runs on the 1st of each month at 9 AM PHT
+ * - PRO users: Detailed analytics report
+ * - FREE users: Basic stats with upgrade CTA
  */
 @Injectable()
 export class MonthlyReportCron {
@@ -25,11 +26,11 @@ export class MonthlyReportCron {
   ) {}
 
   /**
-   * Monthly report - 1st of each month at 10 AM UTC
+   * Monthly report - 1st of each month at 9 AM PHT
    */
-  @Cron('0 10 1 * *', {
+  @Cron('0 9 1 * *', {
     name: 'monthly-report',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Manila',
   })
   async sendMonthlyReports(): Promise<void> {
     this.logger.log('Monthly report cron started', 'MonthlyReportCron', {
@@ -54,7 +55,17 @@ export class MonthlyReportCron {
       });
       const year = lastMonthStart.getFullYear();
 
-      // Get all PRO users with email notifications enabled
+      const appUrl = this.configService.getOrThrow('app.frontendUrl', {
+        infer: true,
+      });
+      const defaultSender = this.configService.getOrThrow('resend.sender', {
+        infer: true,
+      });
+
+      let proReportsSent = 0;
+      let freeReportsSent = 0;
+
+      // ========== PRO USERS: Detailed Report ==========
       const proUsers = await this.prisma.user.findMany({
         where: {
           userType: UserType.PRO,
@@ -67,30 +78,14 @@ export class MonthlyReportCron {
         },
       });
 
-      if (proUsers.length === 0) {
-        this.logger.log('No PRO users to send reports to', 'MonthlyReportCron');
-        return;
-      }
-
-      const dashboardUrl = this.configService.getOrThrow('app.url', {
-        infer: true,
-      });
-      const defaultSender = this.configService.getOrThrow('resend.sender', {
-        infer: true,
-      });
-
-      let reportsSent = 0;
-
       for (const user of proUsers) {
         try {
-          // Get user's monthly analytics via service
           const analytics = await this.linkService.getUserMonthlyAnalytics(
             user.id,
             lastMonthStart,
             lastMonthEnd,
           );
 
-          // Calculate growth percentage
           let growthPercentage: number | undefined;
           if (analytics.previousMonthClicks > 0) {
             growthPercentage = Math.round(
@@ -99,11 +94,11 @@ export class MonthlyReportCron {
                 100,
             );
           } else if (analytics.totalClicks > 0) {
-            // First month with activity - no comparison available
             growthPercentage = undefined;
           }
 
           const html = await EmailRenderer.renderMonthlyReport({
+            baseUrl: appUrl,
             firstName: user.firstName ?? undefined,
             month: monthName,
             year,
@@ -117,7 +112,7 @@ export class MonthlyReportCron {
             topDevices: analytics.topDevices,
             topReferrers: analytics.topReferrers,
             bestDay: analytics.bestDay,
-            dashboardUrl: `${dashboardUrl}/dashboard/analytics`,
+            dashboardUrl: `${appUrl}/dashboard/analytics/overview`,
           });
 
           await this.emailProducer.publishSendEmail({
@@ -128,10 +123,70 @@ export class MonthlyReportCron {
             from: defaultSender,
           });
 
-          reportsSent++;
+          proReportsSent++;
         } catch (error) {
           this.logger.error(
-            `Failed to send monthly report to user: ${user.id}`,
+            `Failed to send PRO monthly report to user: ${user.id}`,
+            'MonthlyReportCron',
+            { error: error instanceof Error ? error.message : 'Unknown error' },
+          );
+        }
+      }
+
+      // ========== FREE USERS: Basic Report with Upgrade CTA ==========
+      const freeUsers = await this.prisma.user.findMany({
+        where: {
+          userType: UserType.FREE,
+          emailNotificationsEnabled: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+        },
+      });
+
+      for (const user of freeUsers) {
+        try {
+          const analytics = await this.linkService.getUserMonthlyAnalytics(
+            user.id,
+            lastMonthStart,
+            lastMonthEnd,
+          );
+
+          // Skip users with zero activity to avoid spammy emails
+          if (
+            analytics.totalClicks === 0 &&
+            analytics.linksCreatedThisMonth === 0
+          ) {
+            continue;
+          }
+
+          const html = await EmailRenderer.renderFreeMonthlyReport({
+            baseUrl: appUrl,
+            firstName: user.firstName ?? undefined,
+            month: monthName,
+            year,
+            totalClicks: analytics.totalClicks,
+            uniqueVisitors: analytics.uniqueVisitors,
+            totalActiveLinks: analytics.totalActiveLinks,
+            linksCreatedThisMonth: analytics.linksCreatedThisMonth,
+            upgradeUrl: `${appUrl}/dashboard/settings`,
+            dashboardUrl: `${appUrl}/dashboard`,
+          });
+
+          await this.emailProducer.publishSendEmail({
+            userId: user.id,
+            to: user.email,
+            subject: `📊 Your Minifi Report for ${monthName} ${year}`,
+            html,
+            from: defaultSender,
+          });
+
+          freeReportsSent++;
+        } catch (error) {
+          this.logger.error(
+            `Failed to send FREE monthly report to user: ${user.id}`,
             'MonthlyReportCron',
             { error: error instanceof Error ? error.message : 'Unknown error' },
           );
@@ -139,8 +194,10 @@ export class MonthlyReportCron {
       }
 
       this.logger.log('Monthly reports sent', 'MonthlyReportCron', {
-        totalProUsers: proUsers.length,
-        reportsSent,
+        proUsers: proUsers.length,
+        proReportsSent,
+        freeUsers: freeUsers.length,
+        freeReportsSent,
         month: monthName,
         year,
       });

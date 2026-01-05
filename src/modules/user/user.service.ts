@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/database/database.service';
 import { LoggerService } from '@/shared/logger/logger.service';
@@ -7,7 +7,6 @@ import { EmailRenderer } from '@/utils/email/email.util';
 import { User } from '@/generated/prisma/client';
 import { KeycloakJWT } from './interfaces/keycloak-jwt.interface';
 import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
-import { GlobalConfig } from '@/config/config.type';
 
 /**
  * Service for managing user profiles with sync-on-demand pattern
@@ -20,7 +19,7 @@ export class UserService {
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly emailProducer: EmailProducer,
-    private readonly configService: ConfigService<GlobalConfig>,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -46,12 +45,6 @@ export class UserService {
       if (user) {
         return user;
       }
-
-      // User doesn't exist, create new record
-      this.logger.log(
-        `Creating new user in database: ${userId}`,
-        'UserService',
-      );
 
       user = await this.prisma.user.create({
         data: {
@@ -91,12 +84,22 @@ export class UserService {
    * @param userId - Keycloak sub (user ID)
    * @param dto - Fields to update
    * @returns Updated user record
+   * @throws NotFoundException if user doesn't exist
    */
   async updatePreferences(
     userId: string,
     dto: UpdateUserPreferencesDto,
   ): Promise<User> {
-    this.logger.log(`Updating preferences for user: ${userId}`, 'UserService');
+    // Verify user exists first
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found. Please access your profile first to sync your account.',
+      );
+    }
 
     return this.prisma.user.update({
       where: { id: userId },
@@ -116,7 +119,7 @@ export class UserService {
    */
   private async sendWelcomeEmail(user: User): Promise<void> {
     try {
-      const dashboardUrl = this.configService.getOrThrow('app.url', {
+      const dashboardUrl = this.configService.getOrThrow('app.frontendUrl', {
         infer: true,
       });
       const defaultSender = this.configService.getOrThrow('resend.sender', {
@@ -124,6 +127,7 @@ export class UserService {
       });
 
       const html = await EmailRenderer.renderWelcome({
+        baseUrl: dashboardUrl,
         firstName: user.firstName ?? undefined,
         dashboardUrl: `${dashboardUrl}/dashboard`,
       });
@@ -135,8 +139,6 @@ export class UserService {
         html,
         from: defaultSender,
       });
-
-      this.logger.log(`Welcome email sent to user: ${user.id}`, 'UserService');
     } catch (error) {
       // Don't fail user creation if email fails
       this.logger.error(

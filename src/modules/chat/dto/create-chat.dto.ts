@@ -4,44 +4,50 @@ import {
   IsString,
   IsArray,
   IsOptional,
-  ArrayMinSize,
-  ValidateIf,
   ArrayMaxSize,
+  MaxLength,
 } from 'class-validator';
 import { ChatType } from '@/generated/prisma/client';
 
 /**
  * DTO for creating a new chat
+ *
+ * For PRO-to-Admin chat:
+ * - type: DIRECT (GROUP is blocked by GroupChatBlockerGuard)
+ * - memberIds: Optional - admin is auto-injected by backend
+ * - name: Optional - not used for DIRECT chats
  */
 export class CreateChatDto {
   @ApiProperty({
-    description: 'Chat name (required for GROUP chats, optional for DIRECT)',
-    example: 'Project Team Chat',
+    description: 'Chat name (optional, not used for DIRECT chats with admin)',
+    example: 'Support Chat',
     required: false,
+    maxLength: 100,
   })
   @IsOptional()
   @IsString()
-  @ValidateIf((o) => o.type === ChatType.GROUP)
+  @MaxLength(100)
   name?: string;
 
   @ApiProperty({
-    description: 'Type of chat',
+    description: 'Type of chat. Only DIRECT is allowed (GROUP is blocked).',
     enum: ChatType,
-    example: ChatType.GROUP,
-    default: ChatType.GROUP,
+    example: ChatType.DIRECT,
+    default: ChatType.DIRECT,
   })
   @IsEnum(ChatType)
   type: ChatType;
 
   @ApiProperty({
     description:
-      'Array of Keycloak user IDs to add as members (excluding creator who is auto-added). For DIRECT chats, must contain exactly 1 user ID.',
-    example: ['123e4567-e89b-12d3-a456-426614174000'],
+      'Optional array of member IDs. For PRO-to-admin chat, this is ignored - admin is auto-assigned.',
+    example: [],
     type: [String],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(100) // Reasonable limit for group chats
+  @ArrayMaxSize(100)
   @IsString({ each: true })
-  memberIds: string[];
+  memberIds?: string[];
 }

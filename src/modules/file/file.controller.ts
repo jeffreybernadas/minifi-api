@@ -5,6 +5,9 @@ import {
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -20,6 +23,10 @@ import {
   ApiStandardErrorResponse,
   ApiStandardResponse,
 } from '@/decorators/swagger.decorator';
+
+// File upload constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_FILE_TYPES = /^image\/(jpeg|png|gif|webp)|application\/pdf$/;
 
 @ApiTags('upload')
 @ApiBearerAuth('JWT')
@@ -59,7 +66,15 @@ export class FileController {
   })
   @ApiBody({ type: SingleUploadDto })
   async uploadSingleFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
+          new FileTypeValidator({ fileType: ALLOWED_FILE_TYPES }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
     @Body() dto: SingleUploadDto,
   ) {
     return await this.fileService.uploadSingleFile(file, dto, {
@@ -104,7 +119,17 @@ export class FileController {
     errorCode: 'GENERIC_ERROR',
   })
   @ApiBody({ type: MultipleUploadDto })
-  async uploadMultipleFiles(@UploadedFiles() files: Express.Multer.File[]) {
+  async uploadMultipleFiles(
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
+          new FileTypeValidator({ fileType: ALLOWED_FILE_TYPES }),
+        ],
+      }),
+    )
+    files: Express.Multer.File[],
+  ) {
     return await this.fileService.uploadMultipleFiles(files, {
       'Content-Type': 'multipart/form-data',
     });

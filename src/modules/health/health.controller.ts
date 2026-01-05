@@ -34,13 +34,13 @@ export class HealthController {
       async () => this.memory.checkRSS('memory_rss', 3000 * 1024 * 1024),
       () =>
         this.disk.checkStorage('disk health', {
-          thresholdPercent: 0.5,
-          path: 'C:\\', // Change to '/' when deployed - this is only for Windows
+          thresholdPercent: 0.5, // 50%
+          path: '/', // Change to '/' when deployed - this is only for Windows (C:\ on Windows)
         }),
       () =>
         this.disk.checkStorage('disk health', {
-          threshold: 250 * 1024 * 1024 * 1024,
-          path: 'C:\\', // Change to '/' when deployed - this is only for Windows
+          threshold: 250 * 1024 * 1024 * 1024, // 250GB
+          path: '/', // Change to '/' when deployed - this is only for Windows (C:\ on Windows)
         }),
       () => this.prisma.pingCheck('prisma', this.prismaService),
     ]);

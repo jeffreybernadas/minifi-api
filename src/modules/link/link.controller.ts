@@ -11,7 +11,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { LinkService } from './link.service';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -32,6 +37,7 @@ import {
 } from './dto/analytics-response.dto';
 import { AnalyticsFilterDto } from './dto/analytics-filter.dto';
 import { QrCodeResponseDto } from './dto/qr-code-response.dto';
+import { UserMonthlyAnalyticsDto } from './dto/user-monthly-analytics.dto';
 import { SubscriptionTierGuard } from '@/shared/guards/subscription-tier.guard';
 import { UsageLimitGuard } from '@/shared/guards/usage-limit.guard';
 
@@ -128,6 +134,37 @@ export class LinkController {
     return this.linkService.getUserLinks(user.sub, filters);
   }
 
+  @Get('analytics/overview')
+  @ApiOperation({
+    summary: 'Get global analytics overview for current user',
+    description:
+      'Returns aggregated analytics across ALL links for the authenticated user. No dates = all-time stats with limited chart (90d PRO, 7d FREE). With dates = everything filtered by range.',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Start date (ISO string)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'End date (ISO string)',
+  })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Global analytics retrieved successfully',
+    type: UserMonthlyAnalyticsDto,
+  })
+  getGlobalAnalytics(
+    @AuthenticatedUser() user: KeycloakJWT,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<UserMonthlyAnalyticsDto> {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.linkService.getGlobalAnalytics(user.sub, start, end);
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get a single link by ID',
@@ -187,6 +224,7 @@ export class LinkController {
     description: 'Not Found - Link does not exist or user is not the owner',
     errorCode: 'NOT_FOUND',
   })
+  @UseGuards(SubscriptionTierGuard)
   updateLink(
     @AuthenticatedUser() user: KeycloakJWT,
     @Param('id') id: string,
@@ -388,7 +426,8 @@ export class LinkController {
   getAnalyticsSummary(
     @AuthenticatedUser() user: KeycloakJWT,
     @Param('id') id: string,
+    @Query() filters: AnalyticsFilterDto,
   ): Promise<LinkAnalyticsSummaryDto> {
-    return this.linkService.getAnalyticsSummary(id, user.sub);
+    return this.linkService.getAnalyticsSummary(id, user.sub, filters);
   }
 }

@@ -21,9 +21,6 @@ export class ScanProducer {
         QUEUE_ROUTING_KEYS.SCAN_URL,
         job,
       );
-      this.logger.log('Queued URL scan job', 'ScanProducer', {
-        linkId: job.linkId,
-      });
     } catch (error) {
       this.logger.error(
         'Failed to queue URL scan job',

@@ -31,11 +31,6 @@ export class EmailProducer {
         QUEUE_ROUTING_KEYS.EMAIL_SEND,
         emailJob,
       );
-
-      this.logger.log('Email job published to queue', 'EmailProducer', {
-        to: emailJob.to,
-        subject: emailJob.subject,
-      });
     } catch (error) {
       this.logger.error('Failed to publish email job', 'EmailProducer', {
         error: error instanceof Error ? error.message : 'Unknown error',

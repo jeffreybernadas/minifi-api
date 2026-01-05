@@ -1,0 +1,12 @@
+# robots.txt for Minifi API
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Public pages (allow indexing)
+Allow: /$
+Allow: /docs
+
+# Sitemap
+Sitemap: https://minifi.thecodebit.online/sitemap.xml

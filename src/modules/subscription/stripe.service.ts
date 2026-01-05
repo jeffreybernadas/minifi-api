@@ -166,16 +166,37 @@ export class StripeService {
       { cancel_at_period_end: true },
     );
 
+    // Get period end date for email
+    const firstItem = updated.items?.data?.[0];
+    const periodEnd = firstItem?.current_period_end
+      ? new Date(firstItem.current_period_end * 1000)
+      : null;
+
+    // Send cancellation confirmation email immediately
+    this.logger.log(
+      `Sending cancellation email to user: ${userId}`,
+      'StripeService',
+      { periodEnd },
+    );
+    await this.sendSubscriptionEmail(userId, 'cancelled', periodEnd);
+
     // Return cancellation info for immediate UI feedback
     // The webhook will update local DB with cancelAtPeriodEnd=true
-    // Note: current_period_end comes from subscription items in this Stripe SDK version
-    const firstItem = updated.items?.data?.[0];
-    const periodEnd = firstItem?.current_period_end;
     return {
       cancelAtPeriodEnd: updated.cancel_at_period_end,
-      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
+      currentPeriodEnd: periodEnd,
       status: updated.status,
     };
+  }
+
+  /**
+   * Cancel a Stripe subscription immediately (used by admin for user deletion).
+   * Unlike cancelSubscription(), this terminates immediately instead of at period end.
+   */
+  async cancelSubscriptionImmediately(
+    stripeSubscriptionId: string,
+  ): Promise<void> {
+    await this.stripe.subscriptions.cancel(stripeSubscriptionId);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -232,10 +253,6 @@ export class StripeService {
    * @param event - Verified Stripe event
    */
   async syncFromStripeEvent(event: Stripe.Event) {
-    this.logger.log(`Processing Stripe event: ${event.type}`, 'StripeService', {
-      eventType: event.type,
-      eventId: event.id,
-    });
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
@@ -324,18 +341,6 @@ export class StripeService {
 
     const status = this.mapStripeStatus(subscription.status);
 
-    this.logger.log(
-      'Looking up local subscription by stripeCustomerId',
-      'StripeService',
-      {
-        stripeCustomerId,
-        stripeSubscriptionId,
-        tier,
-        status,
-        cancelAtPeriodEnd,
-      },
-    );
-
     const local = await this.prisma.subscription.findFirst({
       where: { stripeCustomerId },
       select: { userId: true, tier: true },
@@ -353,18 +358,6 @@ export class StripeService {
     // Check if this is an upgrade to PRO
     const isUpgrade =
       local.tier !== SubscriptionTier.PRO && tier === SubscriptionTier.PRO;
-
-    this.logger.log(
-      `Updating subscription for user ${local.userId}`,
-      'StripeService',
-      {
-        userId: local.userId,
-        tier,
-        status,
-        cancelAtPeriodEnd,
-        isUpgrade,
-      },
-    );
 
     await this.subscriptionService.updateSubscriptionFromStripe({
       userId: local.userId,
@@ -386,11 +379,6 @@ export class StripeService {
         currentPeriodEnd,
       );
     }
-
-    this.logger.log(
-      `Successfully updated subscription for user ${local.userId}`,
-      'StripeService',
-    );
   }
 
   /**
@@ -406,21 +394,12 @@ export class StripeService {
         ? subscription.customer
         : subscription.customer.id;
 
-    this.logger.log('Processing subscription deletion', 'StripeService', {
-      stripeCustomerId,
-      subscriptionId: subscription.id,
-    });
-
     const local = await this.prisma.subscription.findFirst({
       where: { stripeCustomerId },
       select: { userId: true },
     });
 
     if (!local) {
-      this.logger.warn(
-        `No local subscription found for deleted stripeCustomerId: ${stripeCustomerId}`,
-        'StripeService',
-      );
       return;
     }
 
@@ -436,11 +415,6 @@ export class StripeService {
 
     // Send cancellation email
     await this.sendSubscriptionEmail(local.userId, 'cancelled', null);
-
-    this.logger.log(
-      `Subscription cancelled for user ${local.userId}`,
-      'StripeService',
-    );
   }
 
   /**
@@ -497,7 +471,7 @@ export class StripeService {
         return;
       }
 
-      const dashboardUrl = this.configService.getOrThrow('app.url', {
+      const dashboardUrl = this.configService.getOrThrow('app.frontendUrl', {
         infer: true,
       });
       const defaultSender = this.configService.getOrThrow('resend.sender', {
@@ -507,6 +481,7 @@ export class StripeService {
       const tier = action === 'cancelled' ? 'FREE' : 'PRO';
 
       const html = await EmailRenderer.renderSubscription({
+        baseUrl: dashboardUrl,
         firstName: user.firstName ?? undefined,
         action,
         tier,
@@ -527,11 +502,6 @@ export class StripeService {
         html,
         from: defaultSender,
       });
-
-      this.logger.log(
-        `Subscription ${action} email sent to user: ${userId}`,
-        'StripeService',
-      );
     } catch (error) {
       this.logger.error(
         `Failed to send subscription email to user: ${userId}`,

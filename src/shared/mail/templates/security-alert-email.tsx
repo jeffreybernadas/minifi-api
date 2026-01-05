@@ -5,12 +5,17 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
+  Link,
   Preview,
   Section,
+  Tailwind,
   Text,
 } from '@react-email/components';
 import { SecurityAlertEmailProps } from '@/common/interfaces/email.interface';
 import * as React from 'react';
+
+const LOGO_URL = 'https://cdn-icons-png.flaticon.com/128/7347/7347153.png';
 
 /**
  * Security Alert Email Template
@@ -26,12 +31,16 @@ export const SecurityAlertEmailTemplate = (props: SecurityAlertEmailProps) => {
     reasoning,
     recommendations,
     scannedAt,
+    baseUrl,
   } = props;
 
-  const readableStatus = status
-    .toLowerCase()
-    .replace(/_/g, ' ')
-    .replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  const previewText = `Security warning for your link ${shortCode || 'unknown'}`;
+
+  const readableStatus =
+    status
+      ?.toLowerCase()
+      ?.replace(/_/g, ' ')
+      ?.replace(/(^|\s)\S/g, (c) => c.toUpperCase()) || 'Unknown';
 
   const threatList = threats?.length
     ? threats
@@ -44,190 +53,166 @@ export const SecurityAlertEmailTemplate = (props: SecurityAlertEmailProps) => {
         ? scannedAt.toISOString()
         : undefined;
 
-  // Status color based on severity
-  const statusColor = status === 'MALICIOUS' ? '#dc2626' : '#b45309';
+  const statusBgColor = status === 'MALICIOUS' ? 'bg-red-600' : 'bg-amber-600';
 
   return (
     <Html>
       <Head />
-      <Preview>⚠️ Security warning for your link {shortCode}</Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Heading style={styles.heading}>⚠️ Security Warning</Heading>
+      <Tailwind>
+        <Body className="mx-auto my-auto bg-white px-2 font-sans">
+          <Preview>{previewText}</Preview>
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+            <Section className="mt-[32px]">
+              <Img
+                src={LOGO_URL}
+                width="40"
+                height="37"
+                alt="Minifi"
+                className="mx-auto my-0"
+              />
+            </Section>
 
-          <Text style={styles.intro}>
-            We've detected potential security issues with one of your shortened
-            links.
-          </Text>
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+              Security Warning
+            </Heading>
 
-          <Section style={styles.linkSection}>
-            <Text style={styles.label}>Short Link</Text>
-            <Text style={styles.value}>{shortCode}</Text>
-
-            <Text style={styles.label}>Destination URL</Text>
-            <Text style={styles.urlValue}>{originalUrl}</Text>
-          </Section>
-
-          <Hr style={styles.divider} />
-
-          <Section style={styles.statusSection}>
-            <Text
-              style={{ ...styles.statusBadge, backgroundColor: statusColor }}
-            >
-              {readableStatus}
+            <Text className="text-[14px] text-black leading-[24px]">
+              We've detected potential security issues with one of your
+              shortened links.
             </Text>
-            {typeof score === 'number' && (
-              <Text style={styles.score}>
-                Risk Score: {((1 - score) * 100).toFixed(0)}%
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Text className="text-[12px] text-[#666666] leading-[20px] uppercase tracking-wide">
+              Short Link
+            </Text>
+            <Text className="text-[14px] text-black leading-[24px] font-semibold mt-[4px]">
+              {shortCode}
+            </Text>
+
+            <Text className="text-[12px] text-[#666666] leading-[20px] uppercase tracking-wide mt-[16px]">
+              Destination URL
+            </Text>
+            <Text className="text-[14px] text-black leading-[24px] mt-[4px] break-all">
+              {originalUrl}
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section className="text-center py-[16px]">
+              <Text
+                className={`inline-block text-[14px] font-semibold text-white px-[16px] py-[8px] rounded ${statusBgColor}`}
+              >
+                {readableStatus}
               </Text>
-            )}
-            {scanDate && <Text style={styles.meta}>Scanned: {scanDate}</Text>}
-          </Section>
+              {typeof score === 'number' && (
+                <Text className="text-[14px] text-black leading-[24px] mt-[8px]">
+                  Risk Score: {((1 - score) * 100).toFixed(0)}%
+                </Text>
+              )}
+              {scanDate && (
+                <Text className="text-[13px] text-[#666666] leading-[24px] mt-[4px]">
+                  Scanned: {scanDate}
+                </Text>
+              )}
+            </Section>
 
-          <Hr style={styles.divider} />
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
 
-          <Section style={styles.threatSection}>
-            <Text style={styles.subheading}>Why we flagged this link</Text>
+            <Text className="text-[14px] text-black leading-[24px] font-semibold">
+              Why we flagged this link
+            </Text>
+
             {threatList.map((threat, idx) => (
-              <Text key={idx} style={styles.threatItem}>
+              <Text key={idx} className="text-[14px] text-black leading-[24px]">
                 • {threat}
               </Text>
             ))}
-            {reasoning && <Text style={styles.reasoning}>{reasoning}</Text>}
-          </Section>
 
-          {recommendations && (
-            <>
-              <Hr style={styles.divider} />
-              <Section>
-                <Text style={styles.subheading}>Recommended Action</Text>
-                <Text style={styles.recommendations}>{recommendations}</Text>
-              </Section>
-            </>
-          )}
+            {reasoning && (
+              <Text className="text-[14px] text-[#666666] leading-[24px] italic mt-[12px]">
+                {reasoning}
+              </Text>
+            )}
 
-          <Hr style={styles.divider} />
+            {recommendations && (
+              <>
+                <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
 
-          <Text style={styles.footer}>
-            If you believe this is a mistake, you can review or rescan the link
-            from your dashboard.
-          </Text>
-        </Container>
-      </Body>
+                <Text className="text-[14px] text-black leading-[24px] font-semibold">
+                  Recommended Action
+                </Text>
+
+                <Section className="bg-blue-50 border-l-[3px] border-blue-600 p-[12px] rounded mt-[8px]">
+                  <Text className="text-[14px] text-black leading-[24px] m-0">
+                    {recommendations}
+                  </Text>
+                </Section>
+              </>
+            )}
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Text className="text-[14px] text-black leading-[24px]">
+              If you believe this is a mistake, you can review or rescan the
+              link from your dashboard.
+            </Text>
+
+            <Hr className="mx-0 my-[26px] w-full border border-[#eaeaea] border-solid" />
+
+            <Section>
+              <Img
+                src={LOGO_URL}
+                width="24"
+                height="24"
+                alt="Minifi"
+                className="my-0"
+              />
+              <Text className="text-[#666666] text-[12px] leading-[20px] mt-[16px]">
+                Minifi - Links made simple.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px] mt-[8px]">
+                © {new Date().getFullYear()} Minifi. All rights reserved.
+              </Text>
+              <Text className="text-[#999999] text-[11px] leading-[16px]">
+                <Link href={baseUrl} className="text-[#666666] underline">
+                  Minifi
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href={`${baseUrl}/privacy`}
+                  className="text-[#666666] underline"
+                >
+                  Privacy
+                </Link>{' '}
+                &bull;{' '}
+                <Link
+                  href={`${baseUrl}/terms`}
+                  className="text-[#666666] underline"
+                >
+                  Terms
+                </Link>
+              </Text>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
 };
 
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  container: {
-    backgroundColor: '#ffffff',
-    margin: '40px auto',
-    padding: '40px',
-    borderRadius: '8px',
-    maxWidth: '600px',
-  },
-  heading: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-  },
-  intro: {
-    fontSize: '16px',
-    color: '#4a5568',
-    marginBottom: '24px',
-    lineHeight: '1.5',
-  },
-  linkSection: {
-    marginBottom: '16px',
-  },
-  label: {
-    fontSize: '12px',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    color: '#6b7280',
-    marginBottom: '4px',
-    marginTop: '12px',
-  },
-  value: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '8px',
-  },
-  urlValue: {
-    fontSize: '14px',
-    color: '#4a5568',
-    wordBreak: 'break-all' as const,
-    marginBottom: '8px',
-  },
-  statusSection: {
-    textAlign: 'center' as const,
-    padding: '16px 0',
-  },
-  statusBadge: {
-    display: 'inline-block',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#ffffff',
-    padding: '8px 16px',
-    borderRadius: '4px',
-    marginBottom: '8px',
-  },
-  score: {
-    fontSize: '14px',
-    color: '#4a5568',
-    marginTop: '8px',
-  },
-  meta: {
-    fontSize: '13px',
-    color: '#718096',
-    marginTop: '4px',
-  },
-  threatSection: {
-    marginBottom: '16px',
-  },
-  subheading: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: '12px',
-  },
-  threatItem: {
-    fontSize: '14px',
-    color: '#4a5568',
-    marginBottom: '6px',
-    lineHeight: '1.5',
-  },
-  reasoning: {
-    fontSize: '14px',
-    color: '#718096',
-    fontStyle: 'italic',
-    marginTop: '12px',
-    lineHeight: '1.5',
-  },
-  recommendations: {
-    fontSize: '14px',
-    color: '#4a5568',
-    lineHeight: '1.5',
-    backgroundColor: '#f7fafc',
-    padding: '12px',
-    borderRadius: '4px',
-    borderLeft: '3px solid #3182ce',
-  },
-  divider: {
-    borderColor: '#e2e8f0',
-    marginTop: '20px',
-    marginBottom: '20px',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#a0aec0',
-    textAlign: 'center' as const,
-  },
-};
+SecurityAlertEmailTemplate.PreviewProps = {
+  originalUrl: 'https://suspicious-site.com/malware',
+  shortCode: 'abc1234',
+  status: 'SUSPICIOUS',
+  score: 0.75,
+  threats: ['Phishing', 'Malware', 'Suspicious redirects'],
+  reasoning:
+    'This URL has been flagged for suspicious activity including potential phishing attempts and malware distribution.',
+  recommendations:
+    'Do not visit this link. Report if you received this from an unknown source. Consider blocking this domain.',
+  scannedAt: new Date(),
+  baseUrl: 'http://localhost:3000',
+} as SecurityAlertEmailProps;
+
+export default SecurityAlertEmailTemplate;

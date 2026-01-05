@@ -128,13 +128,6 @@ export class SubscriptionController {
       throw new BadRequestException('Webhook payload missing');
     }
 
-    this.logger.log('Stripe webhook received', 'StripeWebhook', {
-      signaturePresent: Boolean(signature),
-      bodyLength: rawBody.length,
-      isBuffer: Buffer.isBuffer(rawBody),
-      signatureStart: signature?.substring(0, 50),
-    });
-
     const event = this.stripeService.verifyAndParseWebhook(rawBody, signature);
 
     await this.stripeService.syncFromStripeEvent(event);

@@ -5,7 +5,7 @@ import { ChatQueueService } from './chat.service';
 
 /**
  * Chat Unread Digest Cron Job
- * Runs daily at 8 PM Philippine Time (UTC+8)
+ * Runs daily at 8 PM Philippine Time
  * Sends unread message digest emails to users
  */
 @Injectable()
@@ -16,23 +16,13 @@ export class ChatUnreadDigestCron {
   ) {}
 
   /**
-   * Cron job that runs at 8 PM Philippine Time (12:00 PM UTC)
-   * Philippine Time is UTC+8, so 8 PM PHT = 12:00 PM UTC
-   * Cron expression: '0 12 * * *' (At 12:00 PM UTC every day)
+   * Cron job that runs at 8 PM Philippine Time
    */
-  @Cron('0 12 * * *', {
+  @Cron('0 20 * * *', {
     name: 'chat-unread-digest',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Manila',
   })
   async handleUnreadDigest(): Promise<void> {
-    this.logger.log(
-      'Chat unread digest cron job triggered',
-      'ChatUnreadDigestCron',
-      {
-        time: new Date().toISOString(),
-      },
-    );
-
     try {
       await this.chatQueueService.sendUnreadDigestEmails();
     } catch (error) {

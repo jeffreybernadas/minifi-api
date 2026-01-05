@@ -15,7 +15,7 @@ export class ElasticInit implements OnModuleInit {
 
   async checkConnection() {
     this.elasticSearchClient = new Client({
-      node: this.configService.get('elasticsearch.url'),
+      node: this.configService.getOrThrow('elasticsearch.url'),
     });
     let isConnected = false;
     let retryCount = 0;
@@ -27,7 +27,7 @@ export class ElasticInit implements OnModuleInit {
         const health: ClusterHealthResponse =
           await this.elasticSearchClient.cluster.health({});
         this.logger.log(
-          `${this.configService.get('app.name')}'s Elasticsearch Health Status - ${health.status}`,
+          `${this.configService.getOrThrow('app.name')}'s Elasticsearch Health Status - ${health.status}`,
           'Elasticsearch',
         );
         isConnected = true;
@@ -47,7 +47,7 @@ export class ElasticInit implements OnModuleInit {
           `Connection to Elasticsearch failed (attempt ${retryCount}/${maxRetries}). Retrying in ${delay}ms...`,
           'Elasticsearch',
         );
-        this.logger.log(
+        this.logger.error(
           `Failed to connect to Elasticsearch: ${error}`,
           'Elasticsearch',
         );

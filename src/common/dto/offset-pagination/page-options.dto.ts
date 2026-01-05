@@ -1,6 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Order } from '@/constants/app.constant';
 
 /**
@@ -47,8 +55,10 @@ export class OffsetPageOptionsDto {
 
   @ApiPropertyOptional({
     description: 'Search query',
+    maxLength: 200,
   })
   @IsString()
+  @MaxLength(200)
   @IsOptional()
   readonly search?: string;
 

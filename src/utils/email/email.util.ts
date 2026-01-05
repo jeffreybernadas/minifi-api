@@ -6,6 +6,8 @@ import { LinkExpiringEmailTemplate } from '@/shared/mail/templates/link-expiring
 import { WelcomeEmailTemplate } from '@/shared/mail/templates/welcome-email';
 import { MonthlyReportEmailTemplate } from '@/shared/mail/templates/monthly-report-email';
 import { SubscriptionEmailTemplate } from '@/shared/mail/templates/subscription-email';
+import { LinkDeletionWarningEmailTemplate } from '@/shared/mail/templates/link-deletion-warning-email';
+import { FreeMonthlyReportEmailTemplate } from '@/shared/mail/templates/free-monthly-report-email';
 import {
   TestEmailTemplateProps,
   ChatUnreadDigestProps,
@@ -14,6 +16,8 @@ import {
   WelcomeEmailProps,
   MonthlyReportEmailProps,
   SubscriptionEmailProps,
+  LinkDeletionWarningEmailProps,
+  FreeMonthlyReportEmailProps,
 } from '@/common/interfaces/email.interface';
 
 /**
@@ -78,6 +82,24 @@ export class EmailRenderer {
     data: SubscriptionEmailProps,
   ): Promise<string> {
     return await render(SubscriptionEmailTemplate(data));
+  }
+
+  /**
+   * Renders the LinkDeletionWarning template (FREE users)
+   */
+  static async renderLinkDeletionWarning(
+    data: LinkDeletionWarningEmailProps,
+  ): Promise<string> {
+    return await render(LinkDeletionWarningEmailTemplate(data));
+  }
+
+  /**
+   * Renders the FreeMonthlyReport template (FREE users)
+   */
+  static async renderFreeMonthlyReport(
+    data: FreeMonthlyReportEmailProps,
+  ): Promise<string> {
+    return await render(FreeMonthlyReportEmailTemplate(data));
   }
 
   /**

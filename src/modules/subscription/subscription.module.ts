@@ -15,6 +15,11 @@ import { EmailQueueModule } from '@/shared/queues/email/email.module';
     SubscriptionTierGuard,
     UsageLimitGuard,
   ],
-  exports: [SubscriptionService, SubscriptionTierGuard, UsageLimitGuard],
+  exports: [
+    SubscriptionService,
+    StripeService,
+    SubscriptionTierGuard,
+    UsageLimitGuard,
+  ],
 })
 export class SubscriptionModule {}

@@ -30,7 +30,7 @@ export class EmailQueueService {
    * @param emailJob - Email job data from queue
    */
   async sendEmail(emailJob: SendEmailJobDto): Promise<void> {
-    const defaultSender = this.configService.get('resend.sender', {
+    const defaultSender = this.configService.getOrThrow('resend.sender', {
       infer: true,
     });
 
@@ -42,14 +42,6 @@ export class EmailQueueService {
       });
 
       if (!user) {
-        this.logger.warn(
-          'User not found, skipping email',
-          'EmailQueueService',
-          {
-            userId: emailJob.userId,
-            subject: emailJob.subject,
-          },
-        );
         return;
       }
 

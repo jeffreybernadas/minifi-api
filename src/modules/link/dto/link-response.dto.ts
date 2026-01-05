@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LinkStatus, ScanStatus } from '@/generated/prisma/client';
+import { TagResponseDto } from './tag-response.dto';
 
 class ScanDetailsDto {
   @ApiPropertyOptional({ type: [String] })
@@ -16,7 +17,7 @@ export class LinkResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() userId: string | null;
   @ApiProperty() originalUrl: string;
-  @ApiProperty() shortCode: string;
+  @ApiPropertyOptional() shortCode?: string; // Nullable when customAlias is used
   @ApiPropertyOptional() customAlias?: string;
   @ApiPropertyOptional() title?: string;
   @ApiPropertyOptional() description?: string;
@@ -42,6 +43,8 @@ export class LinkResponseDto {
   @ApiProperty() uniqueClickCount: number;
   @ApiPropertyOptional() lastClickedAt?: Date | null;
   @ApiPropertyOptional() qrCodeUrl?: string | null;
+  @ApiPropertyOptional({ type: [TagResponseDto] })
+  tags?: TagResponseDto[];
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }
