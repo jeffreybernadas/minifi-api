@@ -70,39 +70,40 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  // Setup Swagger documentation AFTER prefix and versioning
-  if (env !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('NestJS Starter API')
-      .setDescription('API documentation for NestJS Starter application')
-      .setVersion('1.0')
-      .addTag('health', 'Health check endpoints')
-      .addTag('users', 'User management endpoints')
-      .addTag('upload', 'File management endpoints')
-      .addTag('chat', 'Chat management endpoints')
-      .addTag('links', 'Link management endpoints')
-      .addTag('redirect', 'Public redirect endpoints')
-      .addServer(`http://localhost:${port}`, 'Development')
-      .addBearerAuth(
-        {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          name: 'JWT',
-          description: 'Enter JWT token',
-          in: 'header',
-        },
-        'JWT',
-      )
-      .build();
+  const appUrl = configService.getOrThrow('app.url', { infer: true });
 
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
+  const config = new DocumentBuilder()
+    .setTitle('NestJS Starter API')
+    .setDescription('API documentation for NestJS Starter application')
+    .setVersion('1.0')
+    .addTag('health', 'Health check endpoints')
+    .addTag('users', 'User management endpoints')
+    .addTag('upload', 'File management endpoints')
+    .addTag('chat', 'Chat management endpoints')
+    .addTag('links', 'Link management endpoints')
+    .addTag('redirect', 'Public redirect endpoints')
+    .addServer(appUrl, env === 'development' ? 'Development' : 'Production')
+    .addServer(`http://localhost:${port}`, 'Development')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
       },
-    });
-  }
+      'JWT',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
   await app.listen(port ?? 3000);
 }
 bootstrap().catch((error) => {
