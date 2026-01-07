@@ -73,8 +73,8 @@ async function bootstrap() {
   const appUrl = configService.getOrThrow('app.url', { infer: true });
 
   const config = new DocumentBuilder()
-    .setTitle('NestJS Starter API')
-    .setDescription('API documentation for NestJS Starter application')
+    .setTitle('Minifi API')
+    .setDescription('API documentation for Minifi application')
     .setVersion('1.0')
     .addTag('health', 'Health check endpoints')
     .addTag('users', 'User management endpoints')
