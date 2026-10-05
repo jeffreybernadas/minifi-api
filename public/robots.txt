@@ -9,4 +9,4 @@ Allow: /$
 Allow: /docs
 
 # Sitemap
-Sitemap: https://minifi.thecodebit.online/sitemap.xml
+Sitemap: https://minifi.thecodebit.space/sitemap.xml

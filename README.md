@@ -4,7 +4,7 @@
 
 Backend API for Minifi - an enterprise-grade URL shortener platform.
 
-🔗 **https://minifi.thecodebit.online**
+🔗 **https://minifi.thecodebit.space**
 
 **Frontend:** [minifi](https://github.com/jeffreybernadas/minifi)
 
