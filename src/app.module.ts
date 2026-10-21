@@ -12,7 +12,6 @@ import { LoggerService } from '@/shared/logger/logger.service';
 import { APP_INTERCEPTOR, APP_GUARD, APP_FILTER } from '@nestjs/core';
 import redisConfig from '@/config/redis/redis.config';
 import elasticsearchConfig from '@/config/elasticsearch/elasticsearch.config';
-import { ApmInit } from '@/utils/apm/apm.util';
 import { ElasticInit } from '@/utils/elasticsearch/elasticsearch.util';
 import { LoggerModule } from '@/shared/logger/logger.module';
 import { ResendModule } from '@/shared/mail/resend.module';
@@ -254,7 +253,6 @@ import openaiConfig from '@/config/openai/openai.config';
     },
     CacheService,
     LoggerService,
-    ApmInit,
     ElasticInit,
   ],
   exports: [

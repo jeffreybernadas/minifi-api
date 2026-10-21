@@ -8,6 +8,10 @@ import {
   TransformedData,
 } from 'winston-elasticsearch';
 
+// Logs waiting to reach Elasticsearch while it's down; past this, new ones are
+// dropped so the wait can't eat the process's memory
+const ES_BUFFER_LIMIT = 1000;
+
 @Injectable()
 export class LoggerService implements NestLogger {
   private readonly logger: Logger;
@@ -43,6 +47,8 @@ export class LoggerService implements NestLogger {
         level: 'info',
         transformer: esTransformer,
         indexPrefix: `${this.configService.getOrThrow('app.name')}-logs`,
+        buffering: true,
+        bufferLimit: ES_BUFFER_LIMIT,
         clientOpts: {
           node: this.configService.getOrThrow('elasticsearch.url'),
           log: 'info',
@@ -55,6 +61,11 @@ export class LoggerService implements NestLogger {
     const esTransport: ElasticsearchTransport = new ElasticsearchTransport(
       options.elasticsearch,
     );
+    // straight to the console: logging this through winston would feed the
+    // same failing transport
+    esTransport.on('error', (error) => {
+      console.error('Elasticsearch log transport failed:', error.message);
+    });
 
     this.logger = createLogger({
       format: logFormat,
