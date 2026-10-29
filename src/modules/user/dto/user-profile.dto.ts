@@ -97,7 +97,7 @@ export class UserProfileDto {
 
   @ApiProperty({
     description: 'Authorized party',
-    example: 'nest-starter-client',
+    example: 'minifi-client',
     required: false,
   })
   azp?: string;
