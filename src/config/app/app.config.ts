@@ -64,7 +64,7 @@ export function getConfig(): AppConfig {
     nodeEnv: (process.env.NODE_ENV ?? Environment.Development) as Environment,
     isHttps: process.env.IS_HTTPS === 'true',
     name: process.env.APP_NAME as string,
-    appPrefix: kebabCase(process.env.APP_NAME ?? 'nest-starter'),
+    appPrefix: kebabCase(process.env.APP_NAME ?? 'minifi'),
     url: process.env.APP_URL ?? `http://localhost:${port}`,
     frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
     port,
