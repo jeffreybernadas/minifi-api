@@ -1,12 +1,6 @@
 # robots.txt for Minifi API
+# The API is not meant for search results; the landing page is noindex.
 
 User-agent: *
 Allow: /
 Disallow: /api/
-
-# Public pages (allow indexing)
-Allow: /$
-Allow: /docs
-
-# Sitemap
-Sitemap: https://minifi.thecodebit.space/sitemap.xml
